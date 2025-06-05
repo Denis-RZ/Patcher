@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Windows.Forms;
 using UniversalCodePatcher.DiffEngine;
+using UniversalCodePatcher;
 
 namespace UniversalCodePatcher.Forms
 {
@@ -19,7 +20,7 @@ namespace UniversalCodePatcher.Forms
         private Button browseBackupButton = new() { Text = "Browse Backup" };
         private RichTextBox logBox = new() { ReadOnly = true, Dock = DockStyle.Bottom, Height = 150 };
         private ProgressBar progress = new() { Dock = DockStyle.Bottom };
-        private DiffEngine.ILogger logger = new DiffEngine.ListLogger();
+        private ILogger logger = new SimpleLogger();
 
         public PatchForm()
         {
@@ -49,6 +50,8 @@ namespace UniversalCodePatcher.Forms
             Controls.Add(panel);
             Controls.Add(progress);
             Controls.Add(logBox);
+
+            logger.OnLogged += e => logBox.AppendText($"{e.Message}\n");
 
             browseRootButton.Click += (s, e) =>
             {
