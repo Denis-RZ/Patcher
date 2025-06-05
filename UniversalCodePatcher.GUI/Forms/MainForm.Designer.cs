@@ -87,7 +87,6 @@ namespace UniversalCodePatcher.Forms
             // splitMain
             // 
             this.splitMain.Dock = DockStyle.Fill;
-            this.splitMain.SplitterDistance = 250;
             this.splitMain.Panel1MinSize = 150;
             this.splitMain.Panel2MinSize = 300;
             // 
@@ -147,7 +146,6 @@ namespace UniversalCodePatcher.Forms
             // splitPreview
             // 
             this.splitPreview.Dock = DockStyle.Fill;
-            this.splitPreview.SplitterDistance = 300;
             this.splitPreview.Panel1.Controls.Add(this.rtbOriginal);
             this.splitPreview.Panel2.Controls.Add(this.rtbPatched);
             // 
