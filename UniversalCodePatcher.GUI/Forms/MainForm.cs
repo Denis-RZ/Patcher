@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using UniversalCodePatcher.DiffEngine;
 using UniversalCodePatcher.Controls;
+using UniversalCodePatcher.Models;
 
 namespace UniversalCodePatcher.Forms
 {
