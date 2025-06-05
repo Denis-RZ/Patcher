@@ -7,7 +7,16 @@ namespace UniversalCodePatcher.Forms
     partial class MainForm
     {
         private MenuStrip menuStrip = null!;
-        private TableLayoutPanel layout = null!;
+        private Panel mainPanel = null!;
+        private GroupBox inputCard = null!;
+        private GroupBox targetCard = null!;
+        private GroupBox actionCard = null!;
+        private GroupBox resultsCard = null!;
+        private Label diffStatusLabel = null!;
+        private ModernButton previewButton = null!;
+        private ModernButton undoButton = null!;
+        private CheckBox backupCheckBox = null!;
+        private CheckBox dryRunCheckBox = null!;
 
         private void InitializeComponent()
         {
@@ -29,10 +38,17 @@ namespace UniversalCodePatcher.Forms
             menuStrip.Items.Add(patchMenu);
             menuStrip.Items.Add(helpMenu);
 
+            diffStatusLabel = new Label { AutoSize = true };
+            previewButton = new ModernButton { Text = "Preview" };
+            undoButton = new ModernButton { Text = "Undo", Enabled = false };
+            backupCheckBox = new CheckBox { Text = "Create backup", Checked = true };
+            dryRunCheckBox = new CheckBox { Text = "Dry run" };
+
             diffBox.Multiline = true;
             diffBox.Font = new Font("Consolas", 10);
             diffBox.Dock = DockStyle.Fill;
             diffBox.PlaceholderText = "Paste your diff here...";
+            diffBox.TextChanged += diffBox_TextChanged;
 
             folderBox.Dock = DockStyle.Fill;
             logBox.Multiline = true;
@@ -43,40 +59,59 @@ namespace UniversalCodePatcher.Forms
             applyButton.Click += OnApply;
             clearButton.Click += OnClear;
             browseFolderButton.Click += OnBrowseFolder;
+            undoButton.Click += OnUndo;
 
-            layout = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 3, RowCount = 5 };
-            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 70));
-            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 15));
-            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 15));
+            mainPanel = new Panel { Dock = DockStyle.Fill, Padding = new Padding(6) };
 
-            layout.RowStyles.Add(new RowStyle(SizeType.Percent, 50));
-            layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            layout.RowStyles.Add(new RowStyle(SizeType.Percent, 50));
-            layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            // Input card
+            inputCard = new GroupBox { Text = "\uD83D\uDCC4 Input Diff", Dock = DockStyle.Top, Height = 180 };
+            var inputLayout = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 2 };
+            inputLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+            inputLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            inputLayout.Controls.Add(diffBox, 0, 0);
+            inputLayout.Controls.Add(diffStatusLabel, 0, 1);
+            inputCard.Controls.Add(inputLayout);
 
-            layout.Controls.Add(diffBox, 0, 0);
-            layout.SetColumnSpan(diffBox, 3);
+            // Target card
+            targetCard = new GroupBox { Text = "\uD83D\uDCC1 Target Project", Dock = DockStyle.Top, Height = 80 };
+            var targetLayout = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2 };
+            targetLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            targetLayout.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+            targetLayout.Controls.Add(folderBox, 0, 0);
+            targetLayout.Controls.Add(browseFolderButton, 1, 0);
+            targetCard.Controls.Add(targetLayout);
 
-            var ctrlPanel = new FlowLayoutPanel { Dock = DockStyle.Fill };
-            ctrlPanel.Controls.Add(browseDiffButton);
-            ctrlPanel.Controls.Add(applyButton);
-            ctrlPanel.Controls.Add(clearButton);
-            layout.Controls.Add(ctrlPanel, 0, 1);
-            layout.SetColumnSpan(ctrlPanel, 3);
+            // Action card
+            actionCard = new GroupBox { Text = "\u26A1 Apply Changes", Dock = DockStyle.Top, Height = 90 };
+            var actionLayout = new FlowLayoutPanel { Dock = DockStyle.Fill, AutoSize = true };
+            applyButton.Text = "\uD83D\uDE80 APPLY PATCH";
+            applyButton.Font = new Font("Segoe UI", 11, FontStyle.Bold);
+            applyButton.Height = 40;
+            previewButton.Text = "\uD83D\uDD0D Preview";
+            undoButton.Text = "\u21A9\uFE0F Undo";
+            actionLayout.Controls.Add(applyButton);
+            actionLayout.Controls.Add(previewButton);
+            actionLayout.Controls.Add(undoButton);
+            actionLayout.Controls.Add(backupCheckBox);
+            actionLayout.Controls.Add(dryRunCheckBox);
+            actionCard.Controls.Add(actionLayout);
 
-            layout.Controls.Add(folderBox, 0, 2);
-            layout.SetColumnSpan(folderBox, 2);
-            layout.Controls.Add(browseFolderButton, 2, 2);
+            // Results card
+            resultsCard = new GroupBox { Text = "\uD83D\uDCCB Results", Dock = DockStyle.Fill };
+            var resultLayout = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 2 };
+            resultLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+            resultLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            resultLayout.Controls.Add(logBox, 0, 0);
+            resultLayout.Controls.Add(progress, 0, 1);
+            resultsCard.Controls.Add(resultLayout);
 
-            layout.Controls.Add(logBox, 0, 3);
-            layout.SetColumnSpan(logBox, 3);
-
-            layout.Controls.Add(progress, 0, 4);
-            layout.SetColumnSpan(progress, 3);
+            mainPanel.Controls.Add(resultsCard);
+            mainPanel.Controls.Add(actionCard);
+            mainPanel.Controls.Add(targetCard);
+            mainPanel.Controls.Add(inputCard);
 
             ClientSize = new Size(800, 600);
-            Controls.Add(layout);
+            Controls.Add(mainPanel);
             Controls.Add(menuStrip);
             MainMenuStrip = menuStrip;
             Text = "Universal Code Patcher";
