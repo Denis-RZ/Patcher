@@ -7,6 +7,10 @@ using UniversalCodePatcher.Models;
 
 namespace UniversalCodePatcher.DiffEngine
 {
+    /// <summary>
+    /// Applies unified diff patches to files on disk.
+    /// Creates backups and rolls back on failure.
+    /// </summary>
     public static class DiffApplier
     {
         public static PatchResult ApplyDiff(string diffPath, string rootFolder, string backupFolder, bool dryRun, CancellationToken cancellationToken = default)
@@ -18,16 +22,24 @@ namespace UniversalCodePatcher.DiffEngine
             var parser = new UnifiedDiffParser();
             var diffText = File.ReadAllText(diffPath);
             var patch = parser.Parse(diffText);
+
             var sessionFolder = Path.Combine(backupFolder, DateTime.Now.ToString("yyyyMMdd_HHmmss"));
             if (!dryRun)
                 Directory.CreateDirectory(sessionFolder);
 
             var backups = new List<(string target, string backup)>();
-            try
+
+            foreach (var file in patch.Files)
             {
- 
+                cancellationToken.ThrowIfCancellationRequested();
+
+                var relative = file.ModifiedPath;
+                if (relative.StartsWith("./"))
+                    relative = relative[2..];
+                var targetPath = Path.Combine(rootFolder, relative.Replace('/', Path.DirectorySeparatorChar));
+
+                if (!File.Exists(targetPath))
                 {
- 
                     skippedFiles.Add(targetPath);
                     continue;
                 }
@@ -37,102 +49,58 @@ namespace UniversalCodePatcher.DiffEngine
                 {
                     Directory.CreateDirectory(Path.GetDirectoryName(backupPath)!);
                     File.Copy(targetPath, backupPath, true);
+                    backups.Add((targetPath, backupPath));
                 }
- 
-                    var relative = file.ModifiedPath;
-                    if (relative.StartsWith("./"))
-                        relative = relative.Substring(2);
-                    var targetPath = Path.Combine(rootFolder, relative.Replace('/', Path.DirectorySeparatorChar));
-                    if (!File.Exists(targetPath))
-                    {
-                        result.SkippedFiles.Add(targetPath);
-                        continue;
-                    }
- 
 
-                    var backupPath = Path.Combine(sessionFolder, file.ModifiedPath);
-                    if (!dryRun)
+                try
+                {
+                    var originalLines = File.ReadAllLines(targetPath).ToList();
+                    if (TryApply(file.Hunks, originalLines, out var patched))
                     {
-                        Directory.CreateDirectory(Path.GetDirectoryName(backupPath)!);
-                        File.Copy(targetPath, backupPath, true);
-                        backups.Add((targetPath, backupPath));
-                    }
-
-                    try
-                    {
-                        var originalLines = File.ReadAllLines(targetPath).ToList();
-                        if (TryApply(file.Hunks, originalLines, out var patched))
+                        if (!dryRun)
                         {
-                            if (!dryRun)
-                            {
-                                var temp = Path.Combine(Path.GetDirectoryName(targetPath)!, Path.GetRandomFileName());
-                                File.WriteAllLines(temp, patched);
-                                File.Copy(temp, targetPath, true);
-                                File.Delete(temp);
-                            }
-                            result.PatchedFiles.Add(targetPath);
+                            var temp = Path.Combine(Path.GetDirectoryName(targetPath)!, Path.GetRandomFileName());
+                            File.WriteAllLines(temp, patched);
+                            File.Copy(temp, targetPath, true);
+                            File.Delete(temp);
                         }
-                        else
-                        {
-                            if (!dryRun && File.Exists(backupPath))
-                                File.Copy(backupPath, targetPath, true);
-                            result.RolledBackFiles[targetPath] = "Hunk context mismatch";
-                        }
+                        patchedFiles.Add(targetPath);
                     }
-                    catch (Exception ex)
+                    else
                     {
                         if (!dryRun && File.Exists(backupPath))
-                        {
-                            try
-                            {
-                                File.Copy(backupPath, targetPath, true);
-                            }
-                            catch
-                            {
-                                // ignore restoration errors
-                            }
-                        }
-                        result.RolledBackFiles[targetPath] = ex.Message;
+                            File.Copy(backupPath, targetPath, true);
+                        rolledBackFiles[targetPath] = "Hunk context mismatch";
                     }
- 
-                    patchedFiles.Add(targetPath);
- 
- 
                 }
-            }
-            catch
-            {
-                if (!dryRun)
+                catch (Exception ex)
                 {
- 
                     if (!dryRun && File.Exists(backupPath))
-                        File.Copy(backupPath, targetPath, true);
-                    rolledBackFiles[targetPath] = "Hunk context mismatch";
- 
-                    foreach (var (target, backup) in backups)
                     {
-                        if (File.Exists(backup))
-                        {
-                            try
-                            {
-                                File.Copy(backup, target, true);
-                            }
-                            catch
-                            {
-                                // ignore restoration errors
-                            }
-                        }
+                        try { File.Copy(backupPath, targetPath, true); } catch { }
                     }
- 
+                    rolledBackFiles[targetPath] = ex.Message;
                 }
-                throw;
             }
 
-            var result = new PatchResult();
+            if (rolledBackFiles.Count > 0 && !dryRun)
+            {
+                foreach (var (target, backup) in backups)
+                {
+                    if (File.Exists(backup))
+                    {
+                        try { File.Copy(backup, target, true); } catch { }
+                    }
+                }
+            }
+
+            var result = new PatchResult
+            {
+                Success = rolledBackFiles.Count == 0
+            };
             result.Metadata["PatchedFiles"] = patchedFiles;
             result.Metadata["RolledBackFiles"] = rolledBackFiles;
             result.Metadata["SkippedFiles"] = skippedFiles;
-            result.Success = rolledBackFiles.Count == 0;
             return result;
         }
 
