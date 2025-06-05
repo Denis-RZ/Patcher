@@ -1,28 +1,12 @@
-<Project>
+<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
   <PropertyGroup>
-    <BuildProject Condition="'$(OS)' == 'Windows_NT'">true</BuildProject>
-    <BuildProject Condition="'$(OS)' != 'Windows_NT'">false</BuildProject>
-  </PropertyGroup>
-
-  <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk.WindowsDesktop" Condition="'$(BuildProject)' == 'true'" />
-
-  <PropertyGroup Condition="'$(BuildProject)' == 'true'">
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0-windows</TargetFramework>
     <UseWindowsForms>true</UseWindowsForms>
-    <Nullable>enable</Nullable>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(BuildProject)' != 'true'">
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\UniversalCodePatcher\UniversalCodePatcher.csproj" />
   </ItemGroup>
-
-  <Target Name="SkipOnNonWindows" Condition="'$(BuildProject)' != 'true'">
-    <Message Importance="high" Text="Skipping GUI project build because not on Windows." />
-  </Target>
-
-  <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk.WindowsDesktop" Condition="'$(BuildProject)' == 'true'" />
 </Project>
