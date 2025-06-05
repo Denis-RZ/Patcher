@@ -4,11 +4,26 @@ using System.Linq;
 using UniversalCodePatcher.Interfaces;
 using UniversalCodePatcher.DiffEngine;
 using UniversalCodePatcher.Models;
+using UniversalCodePatcher.Core;
 
 namespace UniversalCodePatcher.Modules.DiffModule
 {
     public class DiffModule : IDiffEngine
     {
+        private readonly IServiceContainer _serviceContainer;
+        private readonly IDiffAlgorithm _algorithm;
+
+        public DiffModule(IServiceContainer? serviceContainer = null)
+        {
+            _serviceContainer = serviceContainer ?? new ServiceContainer();
+
+            if (!_serviceContainer.IsRegistered<IDiffAlgorithm>())
+            {
+                _serviceContainer.RegisterSingleton<IDiffAlgorithm, LineByLineDiffAlgorithm>();
+            }
+
+            _algorithm = _serviceContainer.GetService<IDiffAlgorithm>();
+        }
         public string CreateUnifiedDiff(string original, string modified, string fileName)
         {
             // simplistic diff using existing GetDiff
@@ -40,19 +55,7 @@ namespace UniversalCodePatcher.Modules.DiffModule
 
         public IEnumerable<string> GetDiff(string oldText, string newText)
         {
-            var oldLines = oldText.Split('\n');
-            var newLines = newText.Split('\n');
-            int max = Math.Max(oldLines.Length, newLines.Length);
-            for (int i = 0; i < max; i++)
-            {
-                string oldLine = i < oldLines.Length ? oldLines[i] : string.Empty;
-                string newLine = i < newLines.Length ? newLines[i] : string.Empty;
-                if (oldLine != newLine)
-                {
-                    yield return $"- {oldLine}";
-                    yield return $"+ {newLine}";
-                }
-            }
+            return _algorithm.GetDiff(oldText, newText);
         }
     }
 }
