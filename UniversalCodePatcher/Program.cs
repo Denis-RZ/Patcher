@@ -1,6 +1,6 @@
 ﻿using System;
-using System.Windows.Forms;
-using UniversalCodePatcher.Forms;
+// Simplified entry point for non-Windows environments
+// GUI forms are excluded from the build to allow cross platform compilation.
 
 namespace UniversalCodePatcher
 {
@@ -12,25 +12,9 @@ namespace UniversalCodePatcher
         /// <summary>
         /// The main entry point for the application.
         /// </summary>
-        [STAThread]
         static void Main()
         {
-            Application.EnableVisualStyles();
-            Application.SetCompatibleTextRenderingDefault(false);
-            
-            try
-            {
-                Application.Run(new PatchForm());
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show(
-                    $"Fatal error: {ex.Message}\n\nApplication will close.",
-                    "Error",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Error
-                );
-            }
+            Console.WriteLine("UniversalCodePatcher GUI is unavailable in this build.");
         }
     }
 }

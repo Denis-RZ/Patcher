@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
-using UniversalCodePatcher.Models;
+using Models = UniversalCodePatcher.Models;
 
 namespace UniversalCodePatcher.DiffEngine
 {
@@ -9,23 +9,23 @@ namespace UniversalCodePatcher.DiffEngine
     {
         private static readonly Regex HunkHeader = new(@"^@@ -(\d+),(\d+) \+(\d+),(\d+) @@ ?(.*)");
 
-        public DiffPatch Parse(string diffText)
+        public Models.DiffPatch Parse(string diffText)
         {
-            var patch = new DiffPatch();
+            var patch = new Models.DiffPatch();
             var lines = diffText.Split(new[] { "\r\n", "\n" }, StringSplitOptions.None);
             int i = 0;
             while (i < lines.Length)
             {
                 if (lines[i].StartsWith("--- "))
                 {
-                    var fileDiff = new FileDiff();
+                    var fileDiff = new Models.FileDiff();
                     fileDiff.OriginalPath = lines[i].Substring(4).Trim();
                     i++;
                     if (i >= lines.Length) break;
                     if (lines[i].StartsWith("+++ "))
                     {
                         fileDiff.ModifiedPath = lines[i].Substring(4).Trim();
-                        fileDiff.Status = DiffStatus.Modified;
+                        fileDiff.Status = Models.DiffStatus.Modified;
                         i++;
                     }
                     else
@@ -38,7 +38,7 @@ namespace UniversalCodePatcher.DiffEngine
                     {
                         var match = HunkHeader.Match(lines[i]);
                         if (!match.Success) { i++; continue; }
-                        var hunk = new DiffHunk
+                        var hunk = new Models.DiffHunk
                         {
                             OriginalStart = int.Parse(match.Groups[1].Value),
                             OriginalLength = int.Parse(match.Groups[2].Value),
@@ -53,7 +53,7 @@ namespace UniversalCodePatcher.DiffEngine
                             var line = lines[i];
                             if (line.Length == 0)
                             {
-                                hunk.Lines.Add(new DiffLine { Type = DiffLineType.Context, Content = string.Empty });
+                                hunk.Lines.Add(new Models.DiffLine { Type = Models.DiffLineType.Context, Content = string.Empty });
                             }
                             else
                             {
@@ -61,12 +61,12 @@ namespace UniversalCodePatcher.DiffEngine
                                 string content = line.Length > 1 ? line.Substring(1) : string.Empty;
                                 var type = prefix switch
                                 {
-                                    '+' => DiffLineType.Added,
-                                    '-' => DiffLineType.Removed,
-                                    ' ' => DiffLineType.Context,
-                                    _ => DiffLineType.Context
+                                    '+' => Models.DiffLineType.Added,
+                                    '-' => Models.DiffLineType.Removed,
+                                    ' ' => Models.DiffLineType.Context,
+                                    _ => Models.DiffLineType.Context
                                 };
-                                hunk.Lines.Add(new DiffLine { Type = type, Content = content });
+                                hunk.Lines.Add(new Models.DiffLine { Type = type, Content = content });
                             }
                             i++;
                         }

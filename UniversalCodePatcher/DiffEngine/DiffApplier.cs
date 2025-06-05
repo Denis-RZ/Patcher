@@ -26,7 +26,7 @@ namespace UniversalCodePatcher.DiffEngine
                 var targetPath = Path.Combine(rootFolder, relative.Replace('/', Path.DirectorySeparatorChar));
                 if (!File.Exists(targetPath))
                 {
-                    result.SkippedFiles[targetPath] = "File not found";
+                    result.SkippedFiles.Add(targetPath);
                     continue;
                 }
 
