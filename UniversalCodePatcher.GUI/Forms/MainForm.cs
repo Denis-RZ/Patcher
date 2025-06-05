@@ -1,101 +1,64 @@
 using System;
 using System.IO;
+using System.Linq;
+using System.Drawing;
 using System.Windows.Forms;
-using UniversalCodePatcher.Helpers;
-using UniversalCodePatcher.UI.Panels;
-using UniversalCodePatcher.Workflow;
+using UniversalCodePatcher.DiffEngine;
+using UniversalCodePatcher.Controls;
 
 namespace UniversalCodePatcher.Forms
 {
     public partial class MainForm : Form
     {
-        private string _currentProjectPath = string.Empty;
-        private WorkflowEngine workflowEngine = null!;
-        private RuleBuilderPanel ruleBuilder = null!;
+        private readonly TextBox diffBox = new();
+        private readonly TextBox folderBox = new();
+        private readonly TextBox logBox = new() { ReadOnly = true };
+        private readonly ProgressBar progress = new() { Dock = DockStyle.Bottom };
+        private readonly ModernButton browseDiffButton = new() { Text = "Browse" };
+        private readonly ModernButton applyButton = new() { Text = "Apply" };
+        private readonly ModernButton clearButton = new() { Text = "Clear" };
+        private readonly ModernButton browseFolderButton = new() { Text = "Browse Folder" };
+        private readonly PatchApplier applier = new(new UniversalCodePatcher.SimpleLogger());
 
         public MainForm()
         {
             InitializeComponent();
-            InitializeNewWorkflow();
         }
 
-        private void InitializeNewWorkflow()
+        private void OnBrowseDiff(object? sender, EventArgs e)
         {
-            workflowEngine = new WorkflowEngine();
-            ruleBuilder = new RuleBuilderPanel();
-
-            tabRules.Controls.Clear();
-            ruleBuilder.Dock = DockStyle.Fill;
-            tabRules.Controls.Add(ruleBuilder);
+            using var dlg = new OpenFileDialog { Filter = "Diff files|*.diff;*.patch" };
+            if (dlg.ShowDialog() == DialogResult.OK)
+                diffBox.Text = File.ReadAllText(dlg.FileName);
         }
 
-        private void btnLoadProject_Click(object sender, EventArgs e)
+        private void OnBrowseFolder(object? sender, EventArgs e)
         {
             using var dlg = new FolderBrowserDialog();
             if (dlg.ShowDialog() == DialogResult.OK)
-            {
-                _currentProjectPath = dlg.SelectedPath;
-                LoadProjectTree(_currentProjectPath);
-                Log($"Project loaded: {_currentProjectPath}");
-            }
+                folderBox.Text = dlg.SelectedPath;
         }
 
-        private void btnScan_Click(object sender, EventArgs e)
+        private void OnClear(object? sender, EventArgs e)
         {
-            if (string.IsNullOrEmpty(_currentProjectPath))
+            diffBox.Clear();
+            logBox.Clear();
+        }
+
+        private void OnApply(object? sender, EventArgs e)
+        {
+            if (string.IsNullOrWhiteSpace(folderBox.Text))
             {
-                MessageBox.Show("Select project first");
+                MessageBox.Show("Select project folder");
                 return;
             }
-
-            var files = FileScanner.FindPatchableFiles(
-                _currentProjectPath,
-                new[] { ".cs", ".java", ".py" },
-                new[] { "bin", "obj" });
-
-            foreach (var file in files)
-            {
-                Log($"Found: {file}");
-            }
-        }
-
-        private void btnApplyRules_Click(object sender, EventArgs e)
-        {
-            var rule = ruleBuilder.CreateRule();
-            Log($"Created rule: {rule.Name}");
-        }
-
-        private void LoadProjectTree(string path)
-        {
-            treeProjectFiles.Nodes.Clear();
-            var root = new TreeNode(Path.GetFileName(path)) { Tag = path };
-            BuildTree(path, root);
-            treeProjectFiles.Nodes.Add(root);
-            root.Expand();
-        }
-
-        private void BuildTree(string dir, TreeNode node)
-        {
-            foreach (var d in Directory.GetDirectories(dir))
-            {
-                var child = new TreeNode(Path.GetFileName(d)) { Tag = d };
-                BuildTree(d, child);
-                node.Nodes.Add(child);
-            }
-            foreach (var f in Directory.GetFiles(dir))
-            {
-                node.Nodes.Add(new TreeNode(Path.GetFileName(f)) { Tag = f });
-            }
-        }
-
-        private void Log(string message)
-        {
-            txtLogOutput.AppendText($"[{DateTime.Now:HH:mm:ss}] {message}{Environment.NewLine}");
-        }
-
-        private void MainForm_Resize(object sender, EventArgs e)
-        {
-            layoutManager.UpdateLayout(this);
+            progress.Style = ProgressBarStyle.Marquee;
+            var result = applier.ApplyDiffText(diffBox.Text, folderBox.Text, Path.Combine(folderBox.Text, "patch_backups"), false);
+            progress.Style = ProgressBarStyle.Continuous;
+            progress.Value = 100;
+            logBox.AppendText($"Patched: {string.Join(", ", result.PatchedFiles)}{Environment.NewLine}");
+            foreach (var f in result.Failures)
+                logBox.AppendText($"Failed: {f.FilePath} - {f.ErrorMessage}{Environment.NewLine}");
         }
     }
 }

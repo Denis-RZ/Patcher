@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using System.Drawing;
 using System.Windows.Forms;
 using UniversalCodePatcher.Controls;
@@ -7,88 +6,67 @@ namespace UniversalCodePatcher.Forms
 {
     partial class MainForm
     {
-        private DockLayoutManager layoutManager;
-        private ResizablePanel sidePanel;
-        private Panel mainContentPanel;
-        private TreeView treeProjectFiles;
-        private TabControl tabMain;
-        private TabPage tabRules;
-        private TextBox txtLogOutput;
-        private Button btnLoadProject;
-        private Button btnScan;
-        private Button btnApplyRules;
-        private Panel topPanel;
+        private MenuStrip menuStrip = null!;
+        private TableLayoutPanel layout = null!;
 
         private void InitializeComponent()
         {
-            this.topPanel = new Panel();
-            this.btnLoadProject = new Button();
-            this.btnScan = new Button();
-            this.btnApplyRules = new Button();
-            this.treeProjectFiles = new TreeView();
-            this.tabMain = new TabControl();
-            this.tabRules = new TabPage();
-            this.txtLogOutput = new TextBox();
+            menuStrip = new MenuStrip();
+            menuStrip.Items.Add("File");
+            menuStrip.Items.Add("Patch");
+            menuStrip.Items.Add("Help");
 
-            // topPanel
-            this.topPanel.Controls.Add(this.btnLoadProject);
-            this.topPanel.Controls.Add(this.btnScan);
-            this.topPanel.Controls.Add(this.btnApplyRules);
-            this.topPanel.Dock = DockStyle.Top;
-            this.topPanel.Height = 30;
+            diffBox.Multiline = true;
+            diffBox.Font = new Font("Consolas", 10);
+            diffBox.Dock = DockStyle.Fill;
+            diffBox.PlaceholderText = "Paste your diff here...";
 
-            // btnLoadProject
-            this.btnLoadProject.Text = "Load Project";
-            this.btnLoadProject.Width = 100;
-            this.btnLoadProject.Left = 5;
-            this.btnLoadProject.Click += new System.EventHandler(this.btnLoadProject_Click);
+            folderBox.Dock = DockStyle.Fill;
+            logBox.Multiline = true;
+            logBox.Dock = DockStyle.Fill;
+            logBox.Font = new Font("Consolas", 9);
 
-            // btnScan
-            this.btnScan.Text = "Scan";
-            this.btnScan.Width = 80;
-            this.btnScan.Left = 110;
-            this.btnScan.Click += new System.EventHandler(this.btnScan_Click);
+            browseDiffButton.Click += OnBrowseDiff;
+            applyButton.Click += OnApply;
+            clearButton.Click += OnClear;
+            browseFolderButton.Click += OnBrowseFolder;
 
-            // btnApplyRules
-            this.btnApplyRules.Text = "Apply";
-            this.btnApplyRules.Width = 80;
-            this.btnApplyRules.Left = 195;
-            this.btnApplyRules.Click += new System.EventHandler(this.btnApplyRules_Click);
+            layout = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 3, RowCount = 5 };
+            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 70));
+            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 15));
+            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 15));
 
-            // tabMain
-            this.tabMain.Dock = DockStyle.Fill;
-            this.tabMain.Controls.Add(this.tabRules);
+            layout.RowStyles.Add(new RowStyle(SizeType.Percent, 50));
+            layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            layout.RowStyles.Add(new RowStyle(SizeType.Percent, 50));
+            layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 
-            // tabRules
-            this.tabRules.Text = "Rules";
+            layout.Controls.Add(diffBox, 0, 0);
+            layout.SetColumnSpan(diffBox, 3);
 
-            // txtLogOutput
-            this.txtLogOutput.Dock = DockStyle.Bottom;
-            this.txtLogOutput.Multiline = true;
-            this.txtLogOutput.Height = 120;
+            var ctrlPanel = new FlowLayoutPanel { Dock = DockStyle.Fill };
+            ctrlPanel.Controls.Add(browseDiffButton);
+            ctrlPanel.Controls.Add(applyButton);
+            ctrlPanel.Controls.Add(clearButton);
+            layout.Controls.Add(ctrlPanel, 0, 1);
+            layout.SetColumnSpan(ctrlPanel, 3);
 
-            // layout
-            this.layoutManager = new DockLayoutManager();
-            this.sidePanel = new ResizablePanel() { Name = "sidePanel", WidthPercentage = 0.3 };
-            this.mainContentPanel = new Panel() { Name = "mainContentPanel" };
+            layout.Controls.Add(folderBox, 0, 2);
+            layout.SetColumnSpan(folderBox, 2);
+            layout.Controls.Add(browseFolderButton, 2, 2);
 
-            var dockableControls = new List<DockableControl>
-            {
-                new() { Control = sidePanel, Dock = DockStyle.Left, WidthPercentage = 0.3, MinimumWidth = 250 },
-                new() { Control = mainContentPanel, Dock = DockStyle.Fill }
-            };
+            layout.Controls.Add(logBox, 0, 3);
+            layout.SetColumnSpan(logBox, 3);
 
-            // move existing controls
-            this.sidePanel.Controls.Add(this.treeProjectFiles);
-            this.mainContentPanel.Controls.Add(this.tabMain);
+            layout.Controls.Add(progress, 0, 4);
+            layout.SetColumnSpan(progress, 3);
 
-            // form
-            this.ClientSize = new Size(800, 600);
-            this.Controls.Add(this.txtLogOutput);
-            this.Controls.Add(this.topPanel);
-            this.layoutManager.ArrangeControls(this, dockableControls);
-            this.Resize += new System.EventHandler(this.MainForm_Resize);
-            this.Text = "Universal Code Patcher";
+            ClientSize = new Size(800, 600);
+            Controls.Add(layout);
+            Controls.Add(menuStrip);
+            MainMenuStrip = menuStrip;
+            Text = "Universal Code Patcher";
         }
     }
 }
