@@ -12,11 +12,6 @@ namespace UniversalCodePatcher.Forms
         private GroupBox targetCard = null!;
         private GroupBox actionCard = null!;
         private GroupBox resultsCard = null!;
-        private Label diffStatusLabel = null!;
-        private ModernButton previewButton = null!;
-        private ModernButton undoButton = null!;
-        private CheckBox backupCheckBox = null!;
-        private CheckBox dryRunCheckBox = null!;
 
         private void InitializeComponent()
         {
