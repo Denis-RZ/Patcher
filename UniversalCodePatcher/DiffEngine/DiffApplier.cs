@@ -2,13 +2,14 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using UniversalCodePatcher.Models;
 
 namespace UniversalCodePatcher.DiffEngine
 {
     public static class DiffApplier
     {
-        public static PatchResult ApplyDiff(string diffPath, string rootFolder, string backupFolder, bool dryRun)
+        public static PatchResult ApplyDiff(string diffPath, string rootFolder, string backupFolder, bool dryRun, CancellationToken cancellationToken = default)
         {
             var result = new PatchResult();
             var parser = new UnifiedDiffParser();
@@ -20,6 +21,7 @@ namespace UniversalCodePatcher.DiffEngine
 
             foreach (var file in patch.Files)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 var relative = file.ModifiedPath;
                 if (relative.StartsWith("./"))
                     relative = relative.Substring(2);
