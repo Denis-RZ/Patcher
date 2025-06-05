@@ -39,6 +39,123 @@ namespace UniversalCodePatcher.DiffEngine
             _logger = logger;
         }
 
+        private static bool EqualsIgnoreWhitespace(string a, string b)
+        {
+            string sa = string.Concat(a.Where(c => !char.IsWhiteSpace(c)));
+            string sb = string.Concat(b.Where(c => !char.IsWhiteSpace(c)));
+            return sa == sb;
+        }
+
+        private static int Levenshtein(string s, string t)
+        {
+            int n = s.Length;
+            int m = t.Length;
+            int[,] d = new int[n + 1, m + 1];
+            for (int i = 0; i <= n; i++) d[i, 0] = i;
+            for (int j = 0; j <= m; j++) d[0, j] = j;
+            for (int i = 1; i <= n; i++)
+            {
+                for (int j = 1; j <= m; j++)
+                {
+                    int cost = s[i - 1] == t[j - 1] ? 0 : 1;
+                    d[i, j] = Math.Min(Math.Min(d[i - 1, j] + 1, d[i, j - 1] + 1), d[i - 1, j - 1] + cost);
+                }
+            }
+            return d[n, m];
+        }
+
+        private static double Similarity(string a, string b)
+        {
+            if (a.Length == 0 && b.Length == 0) return 1.0;
+            int dist = Levenshtein(a, b);
+            return 1.0 - (double)dist / Math.Max(a.Length, b.Length);
+        }
+
+        private int FindBestMatch(List<string> source, IList<string> context, int startIndex)
+        {
+            if (context.Count == 0)
+                return startIndex;
+
+            int maxPos = source.Count - context.Count;
+            var exactMatches = new List<int>();
+
+            for (int i = 0; i <= maxPos; i++)
+            {
+                bool exact = true;
+                for (int j = 0; j < context.Count; j++)
+                {
+                    if (source[i + j] != context[j])
+                    {
+                        exact = false;
+                        break;
+                    }
+                }
+                if (exact)
+                    exactMatches.Add(i);
+            }
+
+            if (exactMatches.Count == 1)
+                return exactMatches[0];
+            if (exactMatches.Count > 1)
+            {
+                _logger.LogWarning("Ambiguous context match, using closest index");
+                return exactMatches.OrderBy(i => Math.Abs(i - startIndex)).First();
+            }
+
+            // whitespace tolerant search
+            for (int i = 0; i <= maxPos; i++)
+            {
+                bool ok = true;
+                for (int j = 0; j < context.Count; j++)
+                {
+                    if (!EqualsIgnoreWhitespace(source[i + j], context[j]))
+                    {
+                        ok = false;
+                        break;
+                    }
+                }
+                if (ok)
+                    return i;
+            }
+
+            // fuzzy search
+            double bestScore = 0.0;
+            int bestIndex = -1;
+            for (int i = 0; i <= maxPos; i++)
+            {
+                double score = 0;
+                bool fail = false;
+                for (int j = 0; j < context.Count; j++)
+                {
+                    var sim = Similarity(source[i + j].Trim(), context[j].Trim());
+                    if (sim < 0.5)
+                    {
+                        fail = true;
+                        break;
+                    }
+                    score += sim;
+                }
+                if (fail) continue;
+                score /= context.Count;
+                if (score > bestScore)
+                {
+                    bestScore = score;
+                    bestIndex = i;
+                }
+            }
+            if (bestScore >= 0.8)
+                return bestIndex;
+
+            return -1;
+        }
+
+        private static bool AreLinesEquivalent(string a, string b)
+        {
+            if (a == b) return true;
+            if (EqualsIgnoreWhitespace(a, b)) return true;
+            return Similarity(a.Trim(), b.Trim()) >= 0.8;
+        }
+
         public PatchResult Apply(DiffFile diff, string rootFolder, string backupFolder, bool dryRun)
         {
             var result = new PatchResult();
@@ -81,46 +198,49 @@ namespace UniversalCodePatcher.DiffEngine
             }
 
             var originalLines = File.ReadAllLines(targetPath).ToList();
-            var newline = originalLines.Any(l => l.EndsWith("\r")) ? "\r\n" : "\n";
             BackupFile(targetPath, backupFolder);
+            int lineOffset = 0;
             for (int i = 0; i < diff.Hunks.Count; i++)
             {
                 var hunk = diff.Hunks[i];
-                var position = hunk.OriginalStartLine - 1;
-                if (position < 0 || position > originalLines.Count)
+                var context = hunk.Lines.Where(l => l.Type != ChangeType.Add).Select(l => l.Text).ToList();
+                int expected = hunk.OriginalStartLine - 1 + lineOffset;
+                var position = FindBestMatch(originalLines, context, expected);
+                if (position < 0)
                 {
                     result.Failures.Add(new PatchFailure
                     {
                         FilePath = diff.OriginalFilePath,
                         HunkIndex = i,
                         ErrorMessage = "Context mismatch",
+                        ExpectedContext = context,
+                        ActualContext = originalLines.Skip(Math.Max(0, expected - 2)).Take(context.Count + 4).ToList()
                     });
                     return result;
                 }
+
+                int index = position;
                 foreach (var line in hunk.Lines)
                 {
                     if (line.Type == ChangeType.Context)
                     {
-                        if (position >= originalLines.Count || originalLines[position] != line.Text)
-                        {
-                            result.Failures.Add(new PatchFailure { FilePath = diff.OriginalFilePath, HunkIndex = i, ErrorMessage = "Context mismatch" });
-                            return result;
-                        }
-                        position++;
+                        index++;
                     }
                     else if (line.Type == ChangeType.Remove)
                     {
-                        if (position >= originalLines.Count || originalLines[position] != line.Text)
+                        if (index >= originalLines.Count || !AreLinesEquivalent(originalLines[index], line.Text))
                         {
                             result.Failures.Add(new PatchFailure { FilePath = diff.OriginalFilePath, HunkIndex = i, ErrorMessage = "Context mismatch" });
                             return result;
                         }
-                        originalLines.RemoveAt(position);
+                        originalLines.RemoveAt(index);
+                        lineOffset--;
                     }
                     else if (line.Type == ChangeType.Add)
                     {
-                        originalLines.Insert(position, line.Text);
-                        position++;
+                        originalLines.Insert(index, line.Text);
+                        index++;
+                        lineOffset++;
                     }
                 }
             }
@@ -150,6 +270,20 @@ namespace UniversalCodePatcher.DiffEngine
                 aggregate.Merge(r);
             }
             return aggregate;
+        }
+
+        public PatchResult ApplyDiffText(string diffText, string rootFolder, string backupFolder, bool dryRun)
+        {
+            var temp = Path.GetTempFileName();
+            File.WriteAllText(temp, diffText);
+            try
+            {
+                return ApplyDiff(temp, rootFolder, backupFolder, dryRun);
+            }
+            finally
+            {
+                try { File.Delete(temp); } catch { }
+            }
         }
     }
 }
