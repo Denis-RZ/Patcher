@@ -10,7 +10,10 @@ namespace UniversalCodePatcher.DiffEngine
     {
         public static PatchResult ApplyDiff(string diffPath, string rootFolder, string backupFolder, bool dryRun)
         {
-            var result = new PatchResult();
+            var patchedFiles = new List<string>();
+            var rolledBackFiles = new Dictionary<string, string>();
+            var skippedFiles = new List<string>();
+
             var parser = new UnifiedDiffParser();
             var diffText = File.ReadAllText(diffPath);
             var patch = parser.Parse(diffText);
@@ -26,7 +29,7 @@ namespace UniversalCodePatcher.DiffEngine
                 var targetPath = Path.Combine(rootFolder, relative.Replace('/', Path.DirectorySeparatorChar));
                 if (!File.Exists(targetPath))
                 {
-                    result.SkippedFiles.Add(targetPath);
+                    skippedFiles.Add(targetPath);
                     continue;
                 }
 
@@ -47,16 +50,21 @@ namespace UniversalCodePatcher.DiffEngine
                         File.Copy(temp, targetPath, true);
                         File.Delete(temp);
                     }
-                    result.PatchedFiles.Add(targetPath);
+                    patchedFiles.Add(targetPath);
                 }
                 else
                 {
                     if (!dryRun && File.Exists(backupPath))
                         File.Copy(backupPath, targetPath, true);
-                    result.RolledBackFiles[targetPath] = "Hunk context mismatch";
+                    rolledBackFiles[targetPath] = "Hunk context mismatch";
                 }
             }
 
+            var result = new PatchResult();
+            result.Metadata["PatchedFiles"] = patchedFiles;
+            result.Metadata["RolledBackFiles"] = rolledBackFiles;
+            result.Metadata["SkippedFiles"] = skippedFiles;
+            result.Success = rolledBackFiles.Count == 0;
             return result;
         }
 

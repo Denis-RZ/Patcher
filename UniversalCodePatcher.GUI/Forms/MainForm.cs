@@ -122,7 +122,8 @@ namespace UniversalCodePatcher.Forms
 
                 var result = DiffApplier.ApplyDiff(tempDiffFile, folderBox.Text, backupRoot, dryRunCheckBox.Checked);
 
-                logBox.AppendText($"Modified: {string.Join(", ", result.PatchedFiles)}{Environment.NewLine}");
+                var modified = (System.Collections.Generic.List<string>)result.Metadata["PatchedFiles"];
+                logBox.AppendText($"Modified: {string.Join(", ", modified)}{Environment.NewLine}");
 
                 var dirs = Directory.GetDirectories(backupRoot);
                 if (dirs.Length > 0)

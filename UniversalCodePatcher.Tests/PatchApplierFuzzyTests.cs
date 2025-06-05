@@ -17,7 +17,7 @@ namespace UniversalCodePatcher.Tests
             File.WriteAllText("patchw.diff", diff);
             var applier = new PatchApplier(new SimpleLogger());
             var result = applier.ApplyDiff("patchw.diff", "rootw", "backupw", false);
-            Assert.IsTrue(result.OverallSuccess);
+            Assert.IsTrue(result.Success);
             var lines = File.ReadAllLines("rootw/Test.cs");
             Assert.IsTrue(lines.Any(l => l.Contains("added")));
         }
