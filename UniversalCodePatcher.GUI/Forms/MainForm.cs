@@ -24,8 +24,9 @@ namespace UniversalCodePatcher.Forms
             workflowEngine = new WorkflowEngine();
             ruleBuilder = new RuleBuilderPanel();
 
-            mainContentPanel.Controls.Clear();
-            mainContentPanel.Controls.Add(ruleBuilder);
+            tabRules.Controls.Clear();
+            ruleBuilder.Dock = DockStyle.Fill;
+            tabRules.Controls.Add(ruleBuilder);
         }
 
         private void btnLoadProject_Click(object sender, EventArgs e)
@@ -90,6 +91,11 @@ namespace UniversalCodePatcher.Forms
         private void Log(string message)
         {
             txtLogOutput.AppendText($"[{DateTime.Now:HH:mm:ss}] {message}{Environment.NewLine}");
+        }
+
+        private void MainForm_Resize(object? sender, EventArgs e)
+        {
+            layoutManager.UpdateLayout(this);
         }
     }
 }
