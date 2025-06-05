@@ -12,9 +12,22 @@ namespace UniversalCodePatcher.Forms
         private void InitializeComponent()
         {
             menuStrip = new MenuStrip();
-            menuStrip.Items.Add("File");
-            menuStrip.Items.Add("Patch");
-            menuStrip.Items.Add("Help");
+
+            var fileMenu = new ToolStripMenuItem("File");
+            fileMenu.DropDownItems.Add("Open Diff...", null, OnBrowseDiff);
+            fileMenu.DropDownItems.Add("Exit", null, (s, e) => Close());
+
+            var patchMenu = new ToolStripMenuItem("Patch");
+            patchMenu.DropDownItems.Add("Apply All", null, OnApply);
+            patchMenu.DropDownItems.Add("Clear", null, OnClear);
+
+            var helpMenu = new ToolStripMenuItem("Help");
+            helpMenu.DropDownItems.Add("About", null, (s, e) =>
+                MessageBox.Show("Universal Code Patcher v1.0"));
+
+            menuStrip.Items.Add(fileMenu);
+            menuStrip.Items.Add(patchMenu);
+            menuStrip.Items.Add(helpMenu);
 
             diffBox.Multiline = true;
             diffBox.Font = new Font("Consolas", 10);
