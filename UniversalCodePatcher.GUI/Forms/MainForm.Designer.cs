@@ -33,11 +33,13 @@ namespace UniversalCodePatcher.Forms
             menuStrip.Items.Add(patchMenu);
             menuStrip.Items.Add(helpMenu);
 
-            diffStatusLabel = new Label { AutoSize = true };
-            previewButton = new ModernButton { Text = "Preview" };
-            undoButton = new ModernButton { Text = "Undo", Enabled = false };
-            backupCheckBox = new CheckBox { Text = "Create backup", Checked = true };
-            dryRunCheckBox = new CheckBox { Text = "Dry run" };
+            diffStatusLabel.AutoSize = true;
+            previewButton.Text = "Preview";
+            undoButton.Text = "Undo";
+            undoButton.Enabled = false;
+            backupCheckBox.Text = "Create backup";
+            backupCheckBox.Checked = true;
+            dryRunCheckBox.Text = "Dry run";
 
             diffBox.Multiline = true;
             diffBox.Font = new Font("Consolas", 10);
