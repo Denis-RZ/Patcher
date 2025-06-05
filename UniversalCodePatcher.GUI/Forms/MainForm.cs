@@ -51,9 +51,31 @@ namespace UniversalCodePatcher.Forms
                 return;
             }
             string backup = Path.Combine(folderBox.Text, "patch_backups");
-            var result = DiffApplier.ApplyDiff(diffBox.Text, folderBox.Text, backup, false);
 
-            logBox.AppendText($"Patched files: {result.PatchedFiles.Count}{Environment.NewLine}");
+            string tempDiffFile = Path.GetTempFileName();
+            try
+            {
+                File.WriteAllText(tempDiffFile, diffBox.Text);
+
+                var result = DiffApplier.ApplyDiff(tempDiffFile, folderBox.Text, backup, false);
+
+                logBox.AppendText($"Patched files: {result.PatchedFiles.Count}{Environment.NewLine}");
+            }
+            catch (IOException ex)
+            {
+                MessageBox.Show($"Failed to apply patch: {ex.Message}");
+            }
+            finally
+            {
+                try
+                {
+                    if (File.Exists(tempDiffFile))
+                        File.Delete(tempDiffFile);
+                }
+                catch
+                {
+                }
+            }
         }
 
         private void OnExit(object? sender, EventArgs e)
