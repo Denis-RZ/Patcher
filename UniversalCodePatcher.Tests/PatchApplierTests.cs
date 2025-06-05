@@ -17,7 +17,7 @@ namespace UniversalCodePatcher.Tests
             File.WriteAllText("patch.diff", diff);
             var applier = new PatchApplier(new SimpleLogger());
             var result = applier.ApplyDiff("patch.diff", "root", "backup", false);
-            Assert.IsTrue(result.OverallSuccess);
+            Assert.IsTrue(result.Success);
             var lines = File.ReadAllLines("root/Hello.cs");
             Assert.IsTrue(lines.Any(l => l.Contains("Added comment")));
         }
@@ -31,7 +31,7 @@ namespace UniversalCodePatcher.Tests
             File.WriteAllText("patch2.diff", diff);
             var applier = new PatchApplier(new SimpleLogger());
             var result = applier.ApplyDiff("patch2.diff", "root2", "backup2", false);
-            Assert.IsFalse(result.OverallSuccess);
+            Assert.IsFalse(result.Success);
             var content = File.ReadAllText("root2/Program.cs");
             Assert.IsTrue(content.Contains("Old"));
         }

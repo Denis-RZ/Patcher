@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using UniversalCodePatcher.Models;
 
 namespace UniversalCodePatcher.DiffEngine
 {
@@ -14,22 +15,6 @@ namespace UniversalCodePatcher.DiffEngine
         public IList<string> ActualContext { get; set; } = new List<string>();
     }
 
-    public class PatchResult
-    {
-        public bool OverallSuccess => Failures.Count == 0;
-        public IList<string> PatchedFiles { get; } = new List<string>();
-        public IDictionary<string, string> RolledBackFiles { get; } = new Dictionary<string, string>();
-        public IList<PatchFailure> Failures { get; } = new List<PatchFailure>();
-        public IList<string> SkippedFiles { get; } = new List<string>();
-
-        public void Merge(PatchResult other)
-        {
-            foreach (var f in other.PatchedFiles) PatchedFiles.Add(f);
-            foreach (var kv in other.RolledBackFiles) RolledBackFiles[kv.Key] = kv.Value;
-            foreach (var f in other.Failures) Failures.Add(f);
-            foreach (var s in other.SkippedFiles) SkippedFiles.Add(s);
-        }
-    }
 
     public class PatchApplier
     {
@@ -158,13 +143,17 @@ namespace UniversalCodePatcher.DiffEngine
 
         public PatchResult Apply(DiffFile diff, string rootFolder, string backupFolder, bool dryRun)
         {
-            var result = new PatchResult();
+            var patchedFiles = new List<string>();
+            var skippedFiles = new List<string>();
+            var failures = new List<PatchFailure>();
+            var rolledBack = new Dictionary<string, string>();
+
             var targetPath = Path.Combine(rootFolder, diff.OriginalFilePath);
             if (diff.IsBinary)
             {
-                result.SkippedFiles.Add(diff.OriginalFilePath);
+                skippedFiles.Add(diff.OriginalFilePath);
                 _logger.LogWarning($"Binary file {diff.OriginalFilePath} skipped");
-                return result;
+                return BuildResult();
             }
             if (diff.IsDeletedFile)
             {
@@ -173,13 +162,13 @@ namespace UniversalCodePatcher.DiffEngine
                     BackupFile(targetPath, backupFolder);
                     if (!dryRun)
                         File.Delete(targetPath);
-                    result.PatchedFiles.Add(diff.OriginalFilePath);
+                    patchedFiles.Add(diff.OriginalFilePath);
                 }
                 else
                 {
-                    result.SkippedFiles.Add(diff.OriginalFilePath);
+                    skippedFiles.Add(diff.OriginalFilePath);
                 }
-                return result;
+                return BuildResult();
             }
             if (!File.Exists(targetPath))
             {
@@ -190,11 +179,11 @@ namespace UniversalCodePatcher.DiffEngine
                         Directory.CreateDirectory(Path.GetDirectoryName(targetPath)!);
                         File.WriteAllLines(targetPath, diff.Hunks.SelectMany(h => h.Lines.Where(l => l.Type == ChangeType.Add).Select(l => l.Text)));
                     }
-                    result.PatchedFiles.Add(diff.NewFilePath);
-                    return result;
+                    patchedFiles.Add(diff.NewFilePath);
+                    return BuildResult();
                 }
-                result.SkippedFiles.Add(diff.OriginalFilePath);
-                return result;
+                skippedFiles.Add(diff.OriginalFilePath);
+                return BuildResult();
             }
 
             var originalLines = File.ReadAllLines(targetPath).ToList();
@@ -208,7 +197,7 @@ namespace UniversalCodePatcher.DiffEngine
                 var position = FindBestMatch(originalLines, context, expected);
                 if (position < 0)
                 {
-                    result.Failures.Add(new PatchFailure
+                    failures.Add(new PatchFailure
                     {
                         FilePath = diff.OriginalFilePath,
                         HunkIndex = i,
@@ -216,7 +205,7 @@ namespace UniversalCodePatcher.DiffEngine
                         ExpectedContext = context,
                         ActualContext = originalLines.Skip(Math.Max(0, expected - 2)).Take(context.Count + 4).ToList()
                     });
-                    return result;
+                    return BuildResult();
                 }
 
                 int index = position;
@@ -230,8 +219,8 @@ namespace UniversalCodePatcher.DiffEngine
                     {
                         if (index >= originalLines.Count || !AreLinesEquivalent(originalLines[index], line.Text))
                         {
-                            result.Failures.Add(new PatchFailure { FilePath = diff.OriginalFilePath, HunkIndex = i, ErrorMessage = "Context mismatch" });
-                            return result;
+                            failures.Add(new PatchFailure { FilePath = diff.OriginalFilePath, HunkIndex = i, ErrorMessage = "Context mismatch" });
+                            return BuildResult();
                         }
                         originalLines.RemoveAt(index);
                         lineOffset--;
@@ -248,8 +237,19 @@ namespace UniversalCodePatcher.DiffEngine
             {
                 File.WriteAllLines(targetPath, originalLines.Select(l => l.Replace("\n", string.Empty)), System.Text.Encoding.UTF8);
             }
-            result.PatchedFiles.Add(diff.OriginalFilePath);
-            return result;
+            patchedFiles.Add(diff.OriginalFilePath);
+            return BuildResult();
+
+            PatchResult BuildResult()
+            {
+                var r = new PatchResult();
+                r.Metadata["PatchedFiles"] = patchedFiles;
+                r.Metadata["RolledBackFiles"] = rolledBack;
+                r.Metadata["Failures"] = failures;
+                r.Metadata["SkippedFiles"] = skippedFiles;
+                r.Success = failures.Count == 0;
+                return r;
+            }
         }
 
         private void BackupFile(string path, string backupFolder)
@@ -263,13 +263,29 @@ namespace UniversalCodePatcher.DiffEngine
         {
             var parser = new DiffParser();
             var diffFiles = parser.Parse(diffFilePath);
-            var aggregate = new PatchResult();
+
+            var patched = new List<string>();
+            var skipped = new List<string>();
+            var failures = new List<PatchFailure>();
+            var rolledBack = new Dictionary<string, string>();
+
             foreach (var df in diffFiles)
             {
                 var r = Apply(df, rootFolder, backupFolder, dryRun);
-                aggregate.Merge(r);
+                patched.AddRange((List<string>)r.Metadata["PatchedFiles"]);
+                skipped.AddRange((List<string>)r.Metadata["SkippedFiles"]);
+                failures.AddRange((List<PatchFailure>)r.Metadata["Failures"]);
+                foreach (var kv in (Dictionary<string, string>)r.Metadata["RolledBackFiles"])
+                    rolledBack[kv.Key] = kv.Value;
             }
-            return aggregate;
+
+            var result = new PatchResult();
+            result.Metadata["PatchedFiles"] = patched;
+            result.Metadata["SkippedFiles"] = skipped;
+            result.Metadata["Failures"] = failures;
+            result.Metadata["RolledBackFiles"] = rolledBack;
+            result.Success = failures.Count == 0;
+            return result;
         }
 
         public PatchResult ApplyDiffText(string diffText, string rootFolder, string backupFolder, bool dryRun)

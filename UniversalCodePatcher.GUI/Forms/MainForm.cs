@@ -139,9 +139,14 @@ namespace UniversalCodePatcher.Forms
                 var result = await Task.Run(() =>
                     DiffApplier.ApplyDiff(tempDiffFile, folderBox.Text, backupRoot, dryRunCheckBox.Checked, applyCts.Token));
 
+ 
+                var modified = (System.Collections.Generic.List<string>)result.Metadata["PatchedFiles"];
+                logBox.AppendText($"Modified: {string.Join(", ", modified)}{Environment.NewLine}");
+ 
                 if (!applyCts.IsCancellationRequested)
                 {
                     logBox.AppendText($"Modified: {string.Join(", ", result.PatchedFiles)}{Environment.NewLine}");
+ 
 
                     var dirs = Directory.GetDirectories(backupRoot);
                     if (dirs.Length > 0)

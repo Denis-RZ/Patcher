@@ -20,7 +20,8 @@ namespace UniversalCodePatcher.Tests
             File.WriteAllText(diffPath, diffText);
             var backupDir = Path.Combine(root, "backup");
             var result = DiffApplier.ApplyDiff(diffPath, root, backupDir, false);
-            Assert.AreEqual(0, result.RolledBackFiles.Count);
+            var rolledBack = (System.Collections.Generic.Dictionary<string, string>)result.Metadata["RolledBackFiles"];
+            Assert.AreEqual(0, rolledBack.Count);
             Assert.AreEqual("old\nnew\n", File.ReadAllText(file).Replace("\r", ""));
             Assert.IsTrue(Directory.GetFiles(backupDir, "*", System.IO.SearchOption.AllDirectories).Length > 0);
             Directory.Delete(root, true);
@@ -38,7 +39,8 @@ namespace UniversalCodePatcher.Tests
             File.WriteAllText(diffPath, diffText);
             var backupDir = Path.Combine(root, "backup");
             var result = DiffApplier.ApplyDiff(diffPath, root, backupDir, false);
-            Assert.IsTrue(result.RolledBackFiles.ContainsKey(file));
+            var rolledBack = (System.Collections.Generic.Dictionary<string, string>)result.Metadata["RolledBackFiles"];
+            Assert.IsTrue(rolledBack.ContainsKey(file));
             Assert.AreEqual("old", File.ReadAllText(file));
             Directory.Delete(root, true);
         }
@@ -90,7 +92,8 @@ namespace UniversalCodePatcher.Tests
             File.WriteAllText(diffPath, diffText);
             var backupDir = Path.Combine(root, "backup");
             var result = DiffApplier.ApplyDiff(diffPath, root, backupDir, false);
-            Assert.AreEqual(0, result.RolledBackFiles.Count);
+            var rolledBack = (System.Collections.Generic.Dictionary<string, string>)result.Metadata["RolledBackFiles"];
+            Assert.AreEqual(0, rolledBack.Count);
             var lines = File.ReadAllLines(file);
             Assert.IsTrue(lines.Any(l => l.Contains("Subtract")));
             Directory.Delete(root, true);
