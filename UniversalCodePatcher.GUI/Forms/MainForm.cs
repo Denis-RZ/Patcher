@@ -1,6 +1,5 @@
 using System;
 using System.IO;
-using System.Linq;
 using System.Drawing;
 using System.Windows.Forms;
 using UniversalCodePatcher.DiffEngine;
@@ -18,7 +17,6 @@ namespace UniversalCodePatcher.Forms
         private readonly ModernButton applyButton = new() { Text = "Apply" };
         private readonly ModernButton clearButton = new() { Text = "Clear" };
         private readonly ModernButton browseFolderButton = new() { Text = "Browse Folder" };
-        private readonly PatchApplier applier = new(new UniversalCodePatcher.SimpleLogger());
 
         public MainForm()
         {
@@ -52,13 +50,10 @@ namespace UniversalCodePatcher.Forms
                 MessageBox.Show("Select project folder");
                 return;
             }
-            progress.Style = ProgressBarStyle.Marquee;
-            var result = applier.ApplyDiffText(diffBox.Text, folderBox.Text, Path.Combine(folderBox.Text, "patch_backups"), false);
-            progress.Style = ProgressBarStyle.Continuous;
-            progress.Value = 100;
-            logBox.AppendText($"Patched: {string.Join(", ", result.PatchedFiles)}{Environment.NewLine}");
-            foreach (var f in result.Failures)
-                logBox.AppendText($"Failed: {f.FilePath} - {f.ErrorMessage}{Environment.NewLine}");
+            string backup = Path.Combine(folderBox.Text, "patch_backups");
+            var result = DiffApplier.ApplyDiff(diffBox.Text, folderBox.Text, backup, false);
+
+            logBox.AppendText($"Patched files: {result.PatchedFiles.Count}{Environment.NewLine}");
         }
     }
 }
