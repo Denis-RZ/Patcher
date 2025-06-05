@@ -11,6 +11,17 @@ namespace UniversalCodePatcher.Forms
         public MainForm()
         {
             InitializeComponent();
+            // Ensure splitter positions are set after layout is calculated
+            Load += MainForm_Load;
+        }
+
+        private void MainForm_Load(object? sender, EventArgs e)
+        {
+            // Center splitters once the form has been created
+            if (splitMain.Width > 0)
+                splitMain.SplitterDistance = splitMain.Width / 2;
+            if (splitPreview.Width > 0)
+                splitPreview.SplitterDistance = splitPreview.Width / 2;
         }
 
         private void btnLoadProject_Click(object sender, EventArgs e)
