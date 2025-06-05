@@ -19,44 +19,87 @@ namespace UniversalCodePatcher.DiffEngine
             if (!dryRun)
                 Directory.CreateDirectory(sessionFolder);
 
-            foreach (var file in patch.Files)
+            var backups = new List<(string target, string backup)>();
+            try
             {
-                cancellationToken.ThrowIfCancellationRequested();
-                var relative = file.ModifiedPath;
-                if (relative.StartsWith("./"))
-                    relative = relative.Substring(2);
-                var targetPath = Path.Combine(rootFolder, relative.Replace('/', Path.DirectorySeparatorChar));
-                if (!File.Exists(targetPath))
+ 
                 {
-                    result.SkippedFiles.Add(targetPath);
-                    continue;
-                }
+                    var relative = file.ModifiedPath;
+                    if (relative.StartsWith("./"))
+                        relative = relative.Substring(2);
+                    var targetPath = Path.Combine(rootFolder, relative.Replace('/', Path.DirectorySeparatorChar));
+                    if (!File.Exists(targetPath))
+                    {
+                        result.SkippedFiles.Add(targetPath);
+                        continue;
+                    }
 
-                var backupPath = Path.Combine(sessionFolder, file.ModifiedPath);
-                if (!dryRun)
-                {
-                    Directory.CreateDirectory(Path.GetDirectoryName(backupPath)!);
-                    File.Copy(targetPath, backupPath, true);
-                }
-
-                var originalLines = File.ReadAllLines(targetPath).ToList();
-                if (TryApply(file.Hunks, originalLines, out var patched))
-                {
+                    var backupPath = Path.Combine(sessionFolder, file.ModifiedPath);
                     if (!dryRun)
                     {
-                        var temp = targetPath + ".tmp";
-                        File.WriteAllLines(temp, patched);
-                        File.Copy(temp, targetPath, true);
-                        File.Delete(temp);
+                        Directory.CreateDirectory(Path.GetDirectoryName(backupPath)!);
+                        File.Copy(targetPath, backupPath, true);
+                        backups.Add((targetPath, backupPath));
                     }
-                    result.PatchedFiles.Add(targetPath);
+
+                    try
+                    {
+                        var originalLines = File.ReadAllLines(targetPath).ToList();
+                        if (TryApply(file.Hunks, originalLines, out var patched))
+                        {
+                            if (!dryRun)
+                            {
+                                var temp = Path.Combine(Path.GetDirectoryName(targetPath)!, Path.GetRandomFileName());
+                                File.WriteAllLines(temp, patched);
+                                File.Copy(temp, targetPath, true);
+                                File.Delete(temp);
+                            }
+                            result.PatchedFiles.Add(targetPath);
+                        }
+                        else
+                        {
+                            if (!dryRun && File.Exists(backupPath))
+                                File.Copy(backupPath, targetPath, true);
+                            result.RolledBackFiles[targetPath] = "Hunk context mismatch";
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        if (!dryRun && File.Exists(backupPath))
+                        {
+                            try
+                            {
+                                File.Copy(backupPath, targetPath, true);
+                            }
+                            catch
+                            {
+                                // ignore restoration errors
+                            }
+                        }
+                        result.RolledBackFiles[targetPath] = ex.Message;
+                    }
                 }
-                else
+            }
+            catch
+            {
+                if (!dryRun)
                 {
-                    if (!dryRun && File.Exists(backupPath))
-                        File.Copy(backupPath, targetPath, true);
-                    result.RolledBackFiles[targetPath] = "Hunk context mismatch";
+                    foreach (var (target, backup) in backups)
+                    {
+                        if (File.Exists(backup))
+                        {
+                            try
+                            {
+                                File.Copy(backup, target, true);
+                            }
+                            catch
+                            {
+                                // ignore restoration errors
+                            }
+                        }
+                    }
                 }
+                throw;
             }
 
             return result;
