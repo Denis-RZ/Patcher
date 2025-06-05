@@ -19,7 +19,7 @@ namespace UniversalCodePatcher.Forms
         private Button browseBackupButton = new() { Text = "Browse Backup" };
         private RichTextBox logBox = new() { ReadOnly = true, Dock = DockStyle.Bottom, Height = 150 };
         private ProgressBar progress = new() { Dock = DockStyle.Bottom };
-        private ILogger logger = new ListLogger();
+        private DiffEngine.ILogger logger = new DiffEngine.ListLogger();
 
         public PatchForm()
         {
