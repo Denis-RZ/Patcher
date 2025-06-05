@@ -145,9 +145,6 @@ namespace UniversalCodePatcher.Forms
  
                 if (!applyCts.IsCancellationRequested)
                 {
-                    logBox.AppendText($"Modified: {string.Join(", ", result.PatchedFiles)}{Environment.NewLine}");
- 
-
                     var dirs = Directory.GetDirectories(backupRoot);
                     if (dirs.Length > 0)
                         lastBackupDir = dirs.OrderByDescending(d => d).First();
