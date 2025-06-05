@@ -1,0 +1,13 @@
+# Build artifacts
+bin/
+obj/
+# VS files
+*.user
+*.suo
+*.cache
+# Logs
+*.log
+# Dotnet restore script
+/dotnet-install.sh
+# Test result directories
+TestResults/
