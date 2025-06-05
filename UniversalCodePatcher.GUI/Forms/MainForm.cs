@@ -1,16 +1,31 @@
 using System;
 using System.IO;
 using System.Windows.Forms;
+using UniversalCodePatcher.Helpers;
+using UniversalCodePatcher.UI.Panels;
+using UniversalCodePatcher.Workflow;
 
 namespace UniversalCodePatcher.Forms
 {
     public partial class MainForm : Form
     {
         private string _currentProjectPath = string.Empty;
+        private WorkflowEngine workflowEngine = null!;
+        private RuleBuilderPanel ruleBuilder = null!;
 
         public MainForm()
         {
             InitializeComponent();
+            InitializeNewWorkflow();
+        }
+
+        private void InitializeNewWorkflow()
+        {
+            workflowEngine = new WorkflowEngine();
+            ruleBuilder = new RuleBuilderPanel();
+
+            mainContentPanel.Controls.Clear();
+            mainContentPanel.Controls.Add(ruleBuilder);
         }
 
         private void btnLoadProject_Click(object sender, EventArgs e)
@@ -31,12 +46,22 @@ namespace UniversalCodePatcher.Forms
                 MessageBox.Show("Select project first");
                 return;
             }
-            Log("Scanning files ... (not implemented)");
+
+            var files = FileScanner.FindPatchableFiles(
+                _currentProjectPath,
+                new[] { ".cs", ".java", ".py" },
+                new[] { "bin", "obj" });
+
+            foreach (var file in files)
+            {
+                Log($"Found: {file}");
+            }
         }
 
         private void btnApplyRules_Click(object sender, EventArgs e)
         {
-            Log("Applying rules ... (not implemented)");
+            var rule = ruleBuilder.CreateRule();
+            Log($"Created rule: {rule.Name}");
         }
 
         private void LoadProjectTree(string path)
