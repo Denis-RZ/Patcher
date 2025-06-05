@@ -137,7 +137,7 @@ namespace UniversalCodePatcher.Forms
                 File.WriteAllText(tempDiffFile, diffBox.Text);
 
                 var result = await Task.Run(() =>
-                    DiffApplier.ApplyDiff(tempDiffFile, folderBox.Text, backupRoot, dryRunCheckBox.Checked, applyCts.Token));
+                    DiffApplier.ApplyDiff(tempDiffFile, folderBox.Text, backupRoot, dryRunCheckBox.Checked));
 
  
                 var modified = (System.Collections.Generic.List<string>)result.Metadata["PatchedFiles"];
