@@ -3,6 +3,8 @@ using System.IO;
 using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
+using System.Threading;
+using System.Threading.Tasks;
 using UniversalCodePatcher.DiffEngine;
 using UniversalCodePatcher.Controls;
 
@@ -24,6 +26,8 @@ namespace UniversalCodePatcher.Forms
         private readonly CheckBox dryRunCheckBox = new();
         private readonly Label diffStatusLabel = new();
         private string? lastBackupDir;
+        private CancellationTokenSource? applyCts;
+        private bool isApplying;
 
         public MainForm()
         {
@@ -107,27 +111,51 @@ namespace UniversalCodePatcher.Forms
             logBox.AppendText($"Undo from {lastBackupDir}{Environment.NewLine}");
         }
 
-        private void OnApply(object? sender, EventArgs e)
+        private async void OnApply(object? sender, EventArgs e)
         {
+            if (isApplying)
+            {
+                applyCts?.Cancel();
+                return;
+            }
+
             if (!ValidateInputs())
                 return;
+
+            isApplying = true;
+            applyButton.Text = "Cancel";
+            progress.Style = ProgressBarStyle.Marquee;
+            progress.MarqueeAnimationSpeed = 30;
 
             string backupRoot = Path.Combine(folderBox.Text, "patch_backups");
             Directory.CreateDirectory(backupRoot);
 
             string tempDiffFile = Path.GetTempFileName();
+            applyCts = new CancellationTokenSource();
             try
             {
                 File.WriteAllText(tempDiffFile, diffBox.Text);
 
-                var result = DiffApplier.ApplyDiff(tempDiffFile, folderBox.Text, backupRoot, dryRunCheckBox.Checked);
+                var result = await Task.Run(() =>
+                    DiffApplier.ApplyDiff(tempDiffFile, folderBox.Text, backupRoot, dryRunCheckBox.Checked, applyCts.Token));
 
-                logBox.AppendText($"Modified: {string.Join(", ", result.PatchedFiles)}{Environment.NewLine}");
+                if (!applyCts.IsCancellationRequested)
+                {
+                    logBox.AppendText($"Modified: {string.Join(", ", result.PatchedFiles)}{Environment.NewLine}");
 
-                var dirs = Directory.GetDirectories(backupRoot);
-                if (dirs.Length > 0)
-                    lastBackupDir = dirs.OrderByDescending(d => d).First();
-                undoButton.Enabled = lastBackupDir != null;
+                    var dirs = Directory.GetDirectories(backupRoot);
+                    if (dirs.Length > 0)
+                        lastBackupDir = dirs.OrderByDescending(d => d).First();
+                    undoButton.Enabled = lastBackupDir != null;
+                }
+                else
+                {
+                    logBox.AppendText($"Operation canceled{Environment.NewLine}");
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                logBox.AppendText($"Operation canceled{Environment.NewLine}");
             }
             catch (Exception ex)
             {
@@ -135,6 +163,10 @@ namespace UniversalCodePatcher.Forms
             }
             finally
             {
+                isApplying = false;
+                applyCts = null;
+                applyButton.Text = "Apply";
+                progress.Style = ProgressBarStyle.Blocks;
                 try
                 {
                     if (File.Exists(tempDiffFile))
