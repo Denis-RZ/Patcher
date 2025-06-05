@@ -62,46 +62,97 @@ namespace UniversalCodePatcher.DiffEngine
 
         private static bool TryApply(IEnumerable<DiffHunk> hunks, List<string> originalLines, out List<string> newLines)
         {
-            newLines = new List<string>();
-            int currentIndex = 0;
+            newLines = new List<string>(originalLines);
+            int lineOffset = 0;
 
             foreach (var hunk in hunks)
             {
-                while (currentIndex < hunk.OriginalStart - 1 && currentIndex < originalLines.Count)
-                {
-                    newLines.Add(originalLines[currentIndex]);
-                    currentIndex++;
-                }
+                var context = hunk.Lines
+                    .Where(l => l.Type != DiffLineType.Added)
+                    .Select(l => l.Content)
+                    .ToList();
+                int expected = hunk.OriginalStart - 1 + lineOffset;
+                int position = FindContextPosition(newLines, context, expected);
+                if (position < 0)
+                    return false;
 
+                int index = position;
                 foreach (var line in hunk.Lines)
                 {
                     switch (line.Type)
                     {
                         case DiffLineType.Context:
-                            if (currentIndex >= originalLines.Count || originalLines[currentIndex] != line.Content)
-                                return false;
-                            newLines.Add(originalLines[currentIndex]);
-                            currentIndex++;
+                            index++;
                             break;
                         case DiffLineType.Removed:
-                            if (currentIndex >= originalLines.Count || originalLines[currentIndex] != line.Content)
+                            if (index >= newLines.Count || !LinesMatch(newLines[index], line.Content))
                                 return false;
-                            currentIndex++;
+                            newLines.RemoveAt(index);
+                            lineOffset--;
                             break;
                         case DiffLineType.Added:
-                            newLines.Add(line.Content);
+                            newLines.Insert(index, line.Content);
+                            index++;
+                            lineOffset++;
                             break;
                     }
                 }
             }
 
-            while (currentIndex < originalLines.Count)
+            return true;
+        }
+
+        private static bool LinesMatch(string sourceLine, string contextLine)
+        {
+            if (sourceLine == contextLine)
+                return true;
+            return NormalizeWhitespace(sourceLine) == NormalizeWhitespace(contextLine);
+        }
+
+        private static string NormalizeWhitespace(string line)
+        {
+            return string.Concat(line.Where(c => !char.IsWhiteSpace(c)));
+        }
+
+        private static bool ContextMatches(List<string> sourceLines, IList<string> context, int position)
+        {
+            if (position < 0 || position + context.Count > sourceLines.Count)
+                return false;
+            for (int i = 0; i < context.Count; i++)
             {
-                newLines.Add(originalLines[currentIndex]);
-                currentIndex++;
+                if (!LinesMatch(sourceLines[position + i], context[i]))
+                    return false;
+            }
+            return true;
+        }
+
+        private static int FindContextPosition(List<string> sourceLines, IList<string> context, int expectedIndex)
+        {
+            if (context.Count == 0)
+                return expectedIndex;
+
+            int maxPos = sourceLines.Count - context.Count;
+            if (maxPos < 0)
+                return -1;
+
+            int searchRadius = 3;
+            for (int offset = 0; offset <= searchRadius; offset++)
+            {
+                int forward = expectedIndex + offset;
+                if (forward <= maxPos && ContextMatches(sourceLines, context, forward))
+                    return forward;
+                int backward = expectedIndex - offset;
+                if (offset != 0 && backward >= 0 && ContextMatches(sourceLines, context, backward))
+                    return backward;
             }
 
-            return true;
+            for (int pos = 0; pos <= maxPos; pos++)
+            {
+                if (ContextMatches(sourceLines, context, pos))
+                    return pos;
+            }
+
+            return -1;
         }
 
         public static IEnumerable<string> FindPatchableFiles(string rootFolder, IReadOnlyList<string> includeExtensions, IReadOnlyList<string> excludeFolderPatterns)

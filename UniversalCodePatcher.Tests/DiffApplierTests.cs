@@ -42,5 +42,56 @@ namespace UniversalCodePatcher.Tests
             Assert.AreEqual("old", File.ReadAllText(file));
             Directory.Delete(root, true);
         }
+
+        [TestMethod]
+        public void ApplyDiff_IgnoresWhitespaceDifferences()
+        {
+            var root = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+            Directory.CreateDirectory(root);
+            var file = Path.Combine(root, "Example.cs");
+            string fileContent = string.Join('\n', new[]
+            {
+                "        public int Add(int a, int b)",
+                "        {",
+                "            return a + b;",
+                "        }",
+                "",
+                "        public int Multiply(int a, int b)",
+                "        {",
+                "            return a * b;",
+                "        }",
+                ""
+            });
+            File.WriteAllText(file, fileContent);
+            string diffText = string.Join('\n', new[]
+            {
+                "--- Example.cs",
+                "+++ Example.cs",
+                "@@ -1,9 +1,14 @@",
+                "        public int Add(int a, int b)",
+                "        {",
+                "             return a + b;",
+                "        }",
+                "",
+                "        public int Subtract(int a, int b)",
+                "        {",
+                "             return a - b;",
+                "        }",
+                "",
+                "        public int Multiply(int a, int b)",
+                "        {",
+                "            return a * b;",
+                "        }",
+                ""
+            });
+            var diffPath = Path.Combine(root, "patch.diff");
+            File.WriteAllText(diffPath, diffText);
+            var backupDir = Path.Combine(root, "backup");
+            var result = DiffApplier.ApplyDiff(diffPath, root, backupDir, false);
+            Assert.AreEqual(0, result.RolledBackFiles.Count);
+            var lines = File.ReadAllLines(file);
+            Assert.IsTrue(lines.Any(l => l.Contains("Subtract")));
+            Directory.Delete(root, true);
+        }
     }
 }
