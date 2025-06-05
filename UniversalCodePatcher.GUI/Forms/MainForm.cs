@@ -55,5 +55,10 @@ namespace UniversalCodePatcher.Forms
 
             logBox.AppendText($"Patched files: {result.PatchedFiles.Count}{Environment.NewLine}");
         }
+
+        private void OnExit(object? sender, EventArgs e)
+        {
+            Close();
+        }
     }
 }

@@ -15,7 +15,7 @@ namespace UniversalCodePatcher.Forms
 
             var fileMenu = new ToolStripMenuItem("File");
             fileMenu.DropDownItems.Add("Open Diff...", null, OnBrowseDiff);
-            fileMenu.DropDownItems.Add("Exit", null, (s, e) => Close());
+            fileMenu.DropDownItems.Add("Exit", null, OnExit);
 
             var patchMenu = new ToolStripMenuItem("Patch");
             patchMenu.DropDownItems.Add("Apply All", null, OnApply);
