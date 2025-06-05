@@ -6,15 +6,43 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using UniversalCodePatcher.Interfaces;
 using UniversalCodePatcher.Models;
+using UniversalCodePatcher.Core;
 
 namespace UniversalCodePatcher.Modules.CSharpModule
 {
     public class CSharpModule : BaseModule, ICodeAnalyzer, IPatcher
     {
+        public override string ModuleId => "csharp-module";
+        public override string Name => "CSharp Module";
+        public override Version Version => new(1, 0, 0);
+        public override string Description => "Provides C# support";
+
+        protected override bool OnInitialize()
+        {
+            return true;
+        }
+
         public IEnumerable<PatchType> SupportedPatchTypes => new[]
         {
             PatchType.Replace, PatchType.InsertBefore, PatchType.InsertAfter, PatchType.Delete, PatchType.Modify
         };
+
+        public IEnumerable<string> SupportedLanguages => new[] { "CSharp" };
+
+        public IEnumerable<CodeElement> FindElements(IEnumerable<CodeElement> elements, string pattern)
+        {
+            return elements.Where(e => e.Name.Contains(pattern, StringComparison.OrdinalIgnoreCase));
+        }
+
+        public SyntaxValidationResult ValidateSyntax(string code, string language)
+        {
+            return new SyntaxValidationResult { IsValid = true };
+        }
+
+        public ProjectStructure GetProjectStructure(string projectPath)
+        {
+            return new ProjectStructure { RootPath = projectPath };
+        }
 
         public IEnumerable<CodeElement> AnalyzeCode(string code, string language)
         {

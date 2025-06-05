@@ -18,4 +18,8 @@
     <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="3.3.4" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Remove="Forms/MainForm.cs" />
+  </ItemGroup>
+
 </Project>

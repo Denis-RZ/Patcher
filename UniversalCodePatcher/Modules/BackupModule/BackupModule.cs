@@ -1,15 +1,23 @@
 using System;
 using System.IO;
+using System.Collections.Generic;
 using UniversalCodePatcher.Interfaces;
+using UniversalCodePatcher.Core;
 
 namespace UniversalCodePatcher.Modules.BackupModule
 {
-    public class BackupModule : IModule
+    public class BackupModule : BaseModule
     {
-        public string Name => "BackupModule";
-        public string Version => "1.0";
-        public void Initialize(IServiceContainer services) { }
-        public void Unload() { }
+        public override string ModuleId => "backup-module";
+        public override string Name => "Backup Module";
+        public override Version Version => new(1, 0, 0);
+        public override string Description => "Provides backup management";
+        public override IEnumerable<string> Dependencies => Array.Empty<string>();
+
+        protected override bool OnInitialize()
+        {
+            return true;
+        }
 
         public string CreateBackup(string filePath)
         {
