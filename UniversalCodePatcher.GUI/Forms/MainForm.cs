@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Drawing;
 using System.Linq;
+using System.Collections.Generic;
 using System.Windows.Forms;
 using System.Threading;
 using System.Threading.Tasks;
@@ -140,8 +141,9 @@ namespace UniversalCodePatcher.Forms
                 var result = await Task.Run(() =>
                     DiffApplier.ApplyDiff(tempDiffFile, folderBox.Text, backupRoot, dryRunCheckBox.Checked));
 
- 
-                var modified = (System.Collections.Generic.List<string>)result.Metadata["PatchedFiles"];
+                var modified = result.Metadata.TryGetValue("PatchedFiles", out var patchedObj) && patchedObj is List<string> list
+                    ? list
+                    : new List<string>();
                 logBox.AppendText($"Modified: {string.Join(", ", modified)}{Environment.NewLine}");
  
                 if (!applyCts.IsCancellationRequested)
