@@ -5,7 +5,7 @@ namespace UniversalCodePatcher.Forms
 {
     partial class MainForm
     {
-        private SplitContainer splitMain;
+        private TableLayoutPanel tableMain;
         private TreeView treeProjectFiles;
         private TabControl tabMain;
         private TabPage tabRules;
@@ -18,7 +18,7 @@ namespace UniversalCodePatcher.Forms
         private TextBox txtRulePattern;
         private TextBox txtRuleContent;
         private Button btnAddRule;
-        private SplitContainer splitPreview;
+        private TableLayoutPanel tablePreview;
         private RichTextBox rtbOriginal;
         private RichTextBox rtbPatched;
         private Panel topPanel;
@@ -29,7 +29,7 @@ namespace UniversalCodePatcher.Forms
             this.btnLoadProject = new Button();
             this.btnScan = new Button();
             this.btnApplyRules = new Button();
-            this.splitMain = new SplitContainer();
+            this.tableMain = new TableLayoutPanel();
             this.treeProjectFiles = new TreeView();
             this.tabMain = new TabControl();
             this.tabRules = new TabPage();
@@ -39,20 +39,12 @@ namespace UniversalCodePatcher.Forms
             this.txtRulePattern = new TextBox();
             this.txtRuleContent = new TextBox();
             this.btnAddRule = new Button();
-            this.splitPreview = new SplitContainer();
+            this.tablePreview = new TableLayoutPanel();
             this.rtbOriginal = new RichTextBox();
             this.rtbPatched = new RichTextBox();
             this.topPanel.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.splitMain)).BeginInit();
-            this.splitMain.Panel1.SuspendLayout();
-            this.splitMain.Panel2.SuspendLayout();
-            this.splitMain.SuspendLayout();
             this.tabMain.SuspendLayout();
             this.tabRules.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.splitPreview)).BeginInit();
-            this.splitPreview.Panel1.SuspendLayout();
-            this.splitPreview.Panel2.SuspendLayout();
-            this.splitPreview.SuspendLayout();
             this.SuspendLayout();
             // 
             // topPanel
@@ -84,11 +76,15 @@ namespace UniversalCodePatcher.Forms
             this.btnApplyRules.Left = 195;
             this.btnApplyRules.Click += new System.EventHandler(this.btnApplyRules_Click);
             // 
-            // splitMain
-            // 
-            this.splitMain.Dock = DockStyle.Fill;
-            this.splitMain.Panel1MinSize = 150;
-            this.splitMain.Panel2MinSize = 300;
+            // tableMain
+            //
+            this.tableMain.Dock = DockStyle.Fill;
+            this.tableMain.ColumnCount = 2;
+            this.tableMain.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 30F));
+            this.tableMain.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 70F));
+            this.tableMain.RowCount = 2;
+            this.tableMain.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+            this.tableMain.RowStyles.Add(new RowStyle(SizeType.Absolute, 120F));
             // 
             // treeProjectFiles
             // 
@@ -141,13 +137,18 @@ namespace UniversalCodePatcher.Forms
             // tabPreview
             // 
             this.tabPreview.Text = "Preview";
-            this.tabPreview.Controls.Add(this.splitPreview);
-            // 
-            // splitPreview
-            // 
-            this.splitPreview.Dock = DockStyle.Fill;
-            this.splitPreview.Panel1.Controls.Add(this.rtbOriginal);
-            this.splitPreview.Panel2.Controls.Add(this.rtbPatched);
+            this.tabPreview.Controls.Add(this.tablePreview);
+            //
+            // tablePreview
+            //
+            this.tablePreview.Dock = DockStyle.Fill;
+            this.tablePreview.ColumnCount = 2;
+            this.tablePreview.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
+            this.tablePreview.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
+            this.tablePreview.RowCount = 1;
+            this.tablePreview.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+            this.tablePreview.Controls.Add(this.rtbOriginal, 0, 0);
+            this.tablePreview.Controls.Add(this.rtbPatched, 1, 0);
             // 
             // rtbOriginal
             // 
@@ -161,35 +162,28 @@ namespace UniversalCodePatcher.Forms
             // 
             // txtLogOutput
             // 
-            this.txtLogOutput.Dock = DockStyle.Bottom;
+            this.txtLogOutput.Dock = DockStyle.Fill;
             this.txtLogOutput.Multiline = true;
-            this.txtLogOutput.Height = 100;
+            this.txtLogOutput.Height = 120;
             // 
-            // splitMain Panels
-            // 
-            this.splitMain.Panel1.Controls.Add(this.treeProjectFiles);
-            this.splitMain.Panel2.Controls.Add(this.tabMain);
+            // tableMain Controls
+            //
+            this.tableMain.Controls.Add(this.treeProjectFiles, 0, 0);
+            this.tableMain.Controls.Add(this.tabMain, 1, 0);
+            this.tableMain.Controls.Add(this.txtLogOutput, 0, 1);
+            this.tableMain.SetColumnSpan(this.txtLogOutput, 2);
             // 
             // MainForm
             // 
             this.ClientSize = new System.Drawing.Size(800, 600);
-            this.Controls.Add(this.splitMain);
+            this.Controls.Add(this.tableMain);
             this.Controls.Add(this.topPanel);
-            this.Controls.Add(this.txtLogOutput);
             this.Text = "Universal Code Patcher";
             this.topPanel.ResumeLayout(false);
-            this.splitMain.Panel1.ResumeLayout(false);
-            this.splitMain.Panel2.ResumeLayout(false);
-            ((System.ComponentModel.ISupportInitialize)(this.splitMain)).EndInit();
-            this.splitMain.ResumeLayout(false);
             this.tabMain.ResumeLayout(false);
             this.tabRules.ResumeLayout(false);
             this.tabRules.PerformLayout();
             this.tabPreview.ResumeLayout(false);
-            this.splitPreview.Panel1.ResumeLayout(false);
-            this.splitPreview.Panel2.ResumeLayout(false);
-            ((System.ComponentModel.ISupportInitialize)(this.splitPreview)).EndInit();
-            this.splitPreview.ResumeLayout(false);
             this.ResumeLayout(false);
             this.PerformLayout();
         }
