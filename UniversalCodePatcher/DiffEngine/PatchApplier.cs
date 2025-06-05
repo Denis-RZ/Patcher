@@ -18,11 +18,14 @@ namespace UniversalCodePatcher.DiffEngine
     {
         public bool OverallSuccess => Failures.Count == 0;
         public IList<string> PatchedFiles { get; } = new List<string>();
+        public IDictionary<string, string> RolledBackFiles { get; } = new Dictionary<string, string>();
         public IList<PatchFailure> Failures { get; } = new List<PatchFailure>();
         public IList<string> SkippedFiles { get; } = new List<string>();
+
         public void Merge(PatchResult other)
         {
             foreach (var f in other.PatchedFiles) PatchedFiles.Add(f);
+            foreach (var kv in other.RolledBackFiles) RolledBackFiles[kv.Key] = kv.Value;
             foreach (var f in other.Failures) Failures.Add(f);
             foreach (var s in other.SkippedFiles) SkippedFiles.Add(s);
         }
@@ -30,8 +33,8 @@ namespace UniversalCodePatcher.DiffEngine
 
     public class PatchApplier
     {
-        private readonly ILogger _logger;
-        public PatchApplier(ILogger logger)
+        private readonly UniversalCodePatcher.ILogger _logger;
+        public PatchApplier(UniversalCodePatcher.ILogger logger)
         {
             _logger = logger;
         }

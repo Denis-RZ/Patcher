@@ -1,9 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <OutputType>WinExe</OutputType>
-    <TargetFramework>net6.0-windows</TargetFramework>
-    <UseWindowsForms>true</UseWindowsForms>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <UseWindowsForms>false</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AssemblyTitle>Universal Code Patcher</AssemblyTitle>
@@ -19,7 +19,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Remove="Forms/MainForm.cs" />
+    <Compile Remove="Forms/*.cs" />
+    <Compile Remove="Forms/*.resx" />
   </ItemGroup>
 
 </Project>

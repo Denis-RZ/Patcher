@@ -79,16 +79,20 @@ namespace UniversalCodePatcher.DiffEngine
                         result.Add(currentFile);
                     }
                     currentFile.OriginalFilePath = line.Substring(4).Trim();
+                    if (currentFile.OriginalFilePath.StartsWith("a/"))
+                        currentFile.OriginalFilePath = currentFile.OriginalFilePath.Substring(2);
                     if (currentFile.OriginalFilePath == "/dev/null")
-                    {
-                        currentFile.IsNewFile = true;
-                        currentFile.OriginalFilePath = currentFile.NewFilePath;
-                    }
+                        {
+                            currentFile.IsNewFile = true;
+                            currentFile.OriginalFilePath = currentFile.NewFilePath;
+                        }
                     lineIndex++;
                     if (lineIndex < lines.Length && lines[lineIndex].StartsWith("+++ "))
                     {
                         var newLine = lines[lineIndex];
                         currentFile.NewFilePath = newLine.Substring(4).Trim();
+                        if (currentFile.NewFilePath.StartsWith("b/"))
+                            currentFile.NewFilePath = currentFile.NewFilePath.Substring(2);
                         if (currentFile.NewFilePath == "/dev/null")
                         {
                             currentFile.IsDeletedFile = true;
@@ -154,6 +158,8 @@ namespace UniversalCodePatcher.DiffEngine
                 }
                 lineIndex++;
             }
+            if (result.Count == 0)
+                throw new DiffParseException("No diff content");
             return result;
         }
     }
