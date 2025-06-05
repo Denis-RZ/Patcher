@@ -20,7 +20,7 @@ namespace UniversalCodePatcher
             
             try
             {
-                Application.Run(new MainForm()); // <-- запуск MainForm обратно
+                Application.Run(new PatchForm());
             }
             catch (Exception ex)
             {
