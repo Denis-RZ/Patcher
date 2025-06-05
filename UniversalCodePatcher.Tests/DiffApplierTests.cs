@@ -93,5 +93,24 @@ namespace UniversalCodePatcher.Tests
             Assert.IsTrue(lines.Any(l => l.Contains("Subtract")));
             Directory.Delete(root, true);
         }
+
+        [TestMethod]
+        public void ApplyDiff_WriteFailure_RollsBack()
+        {
+            var root = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+            Directory.CreateDirectory(root);
+            var file = Path.Combine(root, "test.txt");
+            File.WriteAllText(file, "old");
+            string diffText = "--- test.txt\n+++ test.txt\n@@ -1,1 +1,2 @@\n old\n+new";
+            var diffPath = Path.Combine(root, "patch.diff");
+            File.WriteAllText(diffPath, diffText);
+            var backupDir = Path.Combine(root, "backup");
+            using var fs = File.Open(file, FileMode.Open, FileAccess.Read, FileShare.Read);
+            var result = DiffApplier.ApplyDiff(diffPath, root, backupDir, false);
+            Assert.IsTrue(result.RolledBackFiles.ContainsKey(file));
+            Assert.AreEqual("old", File.ReadAllText(file));
+            fs.Dispose();
+            Directory.Delete(root, true);
+        }
     }
 }
