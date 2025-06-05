@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using UniversalCodePatcher.Interfaces;
+using UniversalCodePatcher;
 
 namespace UniversalCodePatcher.Core
 {
@@ -11,6 +12,11 @@ namespace UniversalCodePatcher.Core
     {
         private readonly ConcurrentDictionary<Type, object> _services = new();
         private readonly ConcurrentDictionary<Type, Func<object>> _factories = new();
+
+        public ServiceContainer()
+        {
+            _services[typeof(ILogger)] = new SimpleLogger();
+        }
         
         public void RegisterSingleton<TInterface, TImplementation>()
             where TImplementation : class, TInterface
