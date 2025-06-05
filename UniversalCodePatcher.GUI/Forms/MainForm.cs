@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Drawing;
+using System.Linq;
 using System.Windows.Forms;
 using UniversalCodePatcher.DiffEngine;
 using UniversalCodePatcher.Controls;
@@ -17,6 +18,12 @@ namespace UniversalCodePatcher.Forms
         private readonly ModernButton applyButton = new() { Text = "Apply" };
         private readonly ModernButton clearButton = new() { Text = "Clear" };
         private readonly ModernButton browseFolderButton = new() { Text = "Browse Folder" };
+        private readonly ModernButton previewButton = new();
+        private readonly ModernButton undoButton = new();
+        private readonly CheckBox backupCheckBox = new();
+        private readonly CheckBox dryRunCheckBox = new();
+        private readonly Label diffStatusLabel = new();
+        private string? lastBackupDir;
 
         public MainForm()
         {
@@ -41,27 +48,88 @@ namespace UniversalCodePatcher.Forms
         {
             diffBox.Clear();
             logBox.Clear();
+            diffStatusLabel.Text = string.Empty;
+        }
+
+        private void diffBox_TextChanged(object? sender, EventArgs e)
+        {
+            var parser = new UnifiedDiffParser();
+            try
+            {
+                var patch = parser.Parse(diffBox.Text);
+                if (patch.Files.Count > 0)
+                    diffStatusLabel.Text = $"\u2714 Valid diff - {patch.Files.Count} files";
+                else
+                    diffStatusLabel.Text = "\u274C Invalid diff";
+            }
+            catch
+            {
+                diffStatusLabel.Text = "\u274C Invalid diff";
+            }
+        }
+
+        private bool ValidateInputs()
+        {
+            if (string.IsNullOrWhiteSpace(diffBox.Text))
+            {
+                MessageBox.Show("Paste diff text");
+                return false;
+            }
+            if (string.IsNullOrWhiteSpace(folderBox.Text) || !Directory.Exists(folderBox.Text))
+            {
+                MessageBox.Show("Select project folder");
+                return false;
+            }
+            var parser = new UnifiedDiffParser();
+            if (parser.Parse(diffBox.Text).Files.Count == 0)
+            {
+                MessageBox.Show("Invalid diff format");
+                return false;
+            }
+            return true;
+        }
+
+        private void OnUndo(object? sender, EventArgs e)
+        {
+            if (string.IsNullOrEmpty(lastBackupDir) || !Directory.Exists(lastBackupDir))
+            {
+                MessageBox.Show("No backup available");
+                return;
+            }
+
+            foreach (var file in Directory.GetFiles(lastBackupDir, "*", SearchOption.AllDirectories))
+            {
+                var relative = file.Substring(lastBackupDir.Length + 1);
+                var dest = Path.Combine(folderBox.Text, relative);
+                Directory.CreateDirectory(Path.GetDirectoryName(dest)!);
+                File.Copy(file, dest, true);
+            }
+            logBox.AppendText($"Undo from {lastBackupDir}{Environment.NewLine}");
         }
 
         private void OnApply(object? sender, EventArgs e)
         {
-            if (string.IsNullOrWhiteSpace(folderBox.Text))
-            {
-                MessageBox.Show("Select project folder");
+            if (!ValidateInputs())
                 return;
-            }
-            string backup = Path.Combine(folderBox.Text, "patch_backups");
+
+            string backupRoot = Path.Combine(folderBox.Text, "patch_backups");
+            Directory.CreateDirectory(backupRoot);
 
             string tempDiffFile = Path.GetTempFileName();
             try
             {
                 File.WriteAllText(tempDiffFile, diffBox.Text);
 
-                var result = DiffApplier.ApplyDiff(tempDiffFile, folderBox.Text, backup, false);
+                var result = DiffApplier.ApplyDiff(tempDiffFile, folderBox.Text, backupRoot, dryRunCheckBox.Checked);
 
-                logBox.AppendText($"Patched files: {result.PatchedFiles.Count}{Environment.NewLine}");
+                logBox.AppendText($"Modified: {string.Join(", ", result.PatchedFiles)}{Environment.NewLine}");
+
+                var dirs = Directory.GetDirectories(backupRoot);
+                if (dirs.Length > 0)
+                    lastBackupDir = dirs.OrderByDescending(d => d).First();
+                undoButton.Enabled = lastBackupDir != null;
             }
-            catch (IOException ex)
+            catch (Exception ex)
             {
                 MessageBox.Show($"Failed to apply patch: {ex.Message}");
             }
