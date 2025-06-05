@@ -112,7 +112,8 @@ namespace UniversalCodePatcher.Tests
             var backupDir = Path.Combine(root, "backup");
             using var fs = File.Open(file, FileMode.Open, FileAccess.Read, FileShare.Read);
             var result = DiffApplier.ApplyDiff(diffPath, root, backupDir, false);
-            Assert.IsTrue(result.RolledBackFiles.ContainsKey(file));
+            var rolledBack = (System.Collections.Generic.Dictionary<string, string>)result.Metadata["RolledBackFiles"];
+            Assert.IsTrue(rolledBack.ContainsKey(file));
             Assert.AreEqual("old", File.ReadAllText(file));
             fs.Dispose();
             Directory.Delete(root, true);
