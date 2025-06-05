@@ -93,7 +93,7 @@ namespace UniversalCodePatcher.Forms
             txtLogOutput.AppendText($"[{DateTime.Now:HH:mm:ss}] {message}{Environment.NewLine}");
         }
 
-        private void MainForm_Resize(object? sender, EventArgs e)
+        private void MainForm_Resize(object sender, EventArgs e)
         {
             layoutManager.UpdateLayout(this);
         }
