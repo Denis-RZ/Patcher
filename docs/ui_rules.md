@@ -1,11 +1,31 @@
-- Default form size 800×600, dark theme (30,30,30) with 16px border padding.
-- Use panels as "cards": 16px padding inside, 16px bottom margin, background 45,45,45.
-- Place controls in TableLayoutPanel or FlowLayoutPanel; Dock to Fill or Top as needed.
-- 12pt "Segoe UI" bold for headers, 10pt regular for other text.
-- Buttons 40px high; checkboxes and labels align vertically with 8px spacing.
-- Use auto-sizing and percent-based rows/columns to handle resizing.
-- Name controls in camelCase with meaningful suffix (previewButton, logBox).
-- Prefix event handlers with On for clarity (OnApply, OnUndo).
-- Keep consistent 16px spacing between group panels.
-- Provide placeholder text for input boxes and confirm actions via message dialogs.
-- Start forms centered on screen.
+# Windows Forms UI Standards for Universal Code Patcher
+
+## FORM SPECIFICATIONS:
+- Default size: 1024x768, MinimumSize: 800x600
+- WindowState: Maximized, StartPosition: CenterScreen  
+- BackColor: SystemColors.Control (standard Windows gray)
+- Font: Segoe UI 9pt for UI, Consolas 9pt for code display
+
+## LAYOUT RULES:
+- Use SplitContainer for resizable panels
+- Control spacing: 6px between related controls, 12px between groups
+- Form padding: 12px from all edges
+- Button size: 75x23px (Windows standard), 90x23px for primary actions
+- Panel margins: 3px around buttons, 6px around control groups
+
+## CONTROL STANDARDS:
+- TreeView: CheckBoxes=true, ShowLines=true, standard Windows appearance
+- RichTextBox: Font=Consolas 9pt, ScrollBars=Both, WordWrap=false
+- ListView: View=Details, FullRowSelect=true, GridLines=true
+- Buttons: FlatStyle=System, UseVisualStyleBackColor=true
+
+## NAMING CONVENTIONS:
+- Controls: camelCase + type suffix (fileTreeView, sourceCodeTextBox)
+- Event handlers: OnControlAction (OnApplyClick, OnFileSelected)
+- Forms: PascalCase + Form suffix (MainForm, SettingsForm)
+
+## VISUAL HIERARCHY:
+- MenuStrip and ToolStrip at top
+- Main content in SplitContainer layout
+- Action buttons bottom-right aligned
+- StatusStrip with progress indication at bottom
