@@ -227,7 +227,7 @@ namespace UniversalCodePatcher.Forms
             applyButton.Click += OnApplyPatches;
             projectTree.AfterSelect += OnTreeAfterSelect;
 
-            var fileMenu = menuStrip.Items[0] as ToolStripMenuItem;
+            fileMenu = menuStrip.Items[0] as ToolStripMenuItem;
             if (fileMenu != null)
             {
                 foreach (ToolStripItem item in fileMenu.DropDownItems)
