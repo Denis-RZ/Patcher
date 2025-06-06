@@ -9,6 +9,8 @@ using System.Threading.Tasks;
 using UniversalCodePatcher.DiffEngine;
 using UniversalCodePatcher.Controls;
 using UniversalCodePatcher.Models;
+using UniversalCodePatcher.Helpers;
+using UniversalCodePatcher.UI.Panels;
 
 namespace UniversalCodePatcher.Forms
 {
@@ -38,6 +40,15 @@ namespace UniversalCodePatcher.Forms
         private Panel targetCard = null!;
         private Panel actionCard = null!;
         private Panel resultsCard = null!;
+        private Panel scanCard = null!;
+        private Panel ruleCard = null!;
+        private DataGridView filesGrid = null!;
+        private TextBox searchBox = null!;
+        private ModernButton scanButton = null!;
+        private RuleBuilderPanel ruleBuilder = null!;
+        private ListBox ruleList = null!;
+        private ModernButton addRuleButton = null!;
+        private readonly List<PatchRule> rules = new();
         private string? lastBackupDir;
         private CancellationTokenSource? applyCts;
         private bool isApplying;
@@ -129,6 +140,39 @@ namespace UniversalCodePatcher.Forms
                 File.Copy(file, dest, true);
             }
             logBox.AppendText($"Undo from {lastBackupDir}{Environment.NewLine}");
+        }
+
+        private void OnScan(object? sender, EventArgs e)
+        {
+            if (string.IsNullOrWhiteSpace(folderBox.Text) || !Directory.Exists(folderBox.Text))
+            {
+                MessageBox.Show("Select project folder");
+                return;
+            }
+
+            var files = FileScanner.FindPatchableFiles(folderBox.Text,
+                    new[] { ".cs", ".js" }, new[] { "bin", "obj" })
+                .ToList();
+
+            var filtered = string.IsNullOrWhiteSpace(searchBox.Text)
+                ? files
+                : files.Where(f => f.Contains(searchBox.Text, StringComparison.OrdinalIgnoreCase)).ToList();
+
+            filesGrid.DataSource = filtered.Select(f => new { File = f }).ToList();
+        }
+
+        private void OnAddRule(object? sender, EventArgs e)
+        {
+            var rule = ruleBuilder.CreateRule();
+            rules.Add(rule);
+            ruleList.Items.Add(rule.Name);
+        }
+
+        private void OnPreview(object? sender, EventArgs e)
+        {
+            if (!ValidateInputs())
+                return;
+            MessageBox.Show("Preview not implemented");
         }
 
         private async void OnApply(object? sender, EventArgs e)
@@ -360,6 +404,78 @@ namespace UniversalCodePatcher.Forms
             targetCard.Controls.Add(targetHeader);
             targetCard.Controls.SetChildIndex(targetHeader, 0);
 
+            // scan card
+            scanCard = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 200,
+                Padding = new Padding(16),
+                BackColor = Color.FromArgb(45, 45, 45),
+                Margin = new Padding(0, 0, 0, 16)
+            };
+            var scanHeader = new Label
+            {
+                Text = "\uD83D\uDD0D FILES",
+                Dock = DockStyle.Top,
+                Font = headerFont,
+                ForeColor = Color.White,
+                Padding = new Padding(0, 0, 0, 8)
+            };
+            var scanLayout = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 2 };
+            scanLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            scanLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+            var scanTop = new FlowLayoutPanel { Dock = DockStyle.Top, AutoSize = true };
+            searchBox = new TextBox { Width = 200 };
+            searchBox.PlaceholderText = "Search...";
+            scanButton = new ModernButton { Text = "Scan", Height = 40 };
+            scanTop.Controls.Add(searchBox);
+            scanTop.Controls.Add(scanButton);
+            filesGrid = new DataGridView { Dock = DockStyle.Fill, ReadOnly = true };
+            scanLayout.Controls.Add(scanTop, 0, 0);
+            scanLayout.Controls.Add(filesGrid, 0, 1);
+            scanCard.Controls.Add(scanLayout);
+            scanCard.Controls.Add(scanHeader);
+            scanCard.Controls.SetChildIndex(scanHeader, 0);
+
+            // rule card
+            ruleCard = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 220,
+                Padding = new Padding(16),
+                BackColor = Color.FromArgb(45, 45, 45),
+                Margin = new Padding(0, 0, 0, 16)
+            };
+            var ruleHeader = new Label
+            {
+                Text = "\u270D\uFE0F PATCH RULE",
+                Dock = DockStyle.Top,
+                Font = headerFont,
+                ForeColor = Color.White,
+                Padding = new Padding(0, 0, 0, 8)
+            };
+            var ruleLayout = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2 };
+            ruleLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 40));
+            ruleLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 60));
+            ruleList = new ListBox
+            {
+                Dock = DockStyle.Fill,
+                BackColor = Color.FromArgb(40, 40, 40),
+                ForeColor = Color.White
+            };
+            var builderLayout = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 2 };
+            builderLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+            builderLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            ruleBuilder = new RuleBuilderPanel { Dock = DockStyle.Fill };
+            addRuleButton = new ModernButton { Text = "Add Rule", Height = 40 };
+            builderLayout.Controls.Add(ruleBuilder, 0, 0);
+            builderLayout.Controls.Add(addRuleButton, 0, 1);
+            ruleLayout.Controls.Add(ruleList, 0, 0);
+            ruleLayout.Controls.Add(builderLayout, 1, 0);
+            ruleCard.Controls.Add(ruleLayout);
+            ruleCard.Controls.Add(ruleHeader);
+            ruleCard.Controls.SetChildIndex(ruleHeader, 0);
+
             // action card
             actionCard = new Panel
             {
@@ -434,6 +550,8 @@ namespace UniversalCodePatcher.Forms
 
             contentPanel.Controls.Add(resultsCard);
             contentPanel.Controls.Add(actionCard);
+            contentPanel.Controls.Add(ruleCard);
+            contentPanel.Controls.Add(scanCard);
             contentPanel.Controls.Add(targetCard);
             contentPanel.Controls.Add(inputCard);
 
@@ -445,6 +563,9 @@ namespace UniversalCodePatcher.Forms
             clearButton.Click += OnClear;
             browseFolderButton.Click += OnBrowseFolder;
             undoButton.Click += OnUndo;
+            scanButton.Click += OnScan;
+            addRuleButton.Click += OnAddRule;
+            previewButton.Click += OnPreview;
 
             ClientSize = new Size(800, 600);
             Font = new Font("Segoe UI", 10F);
