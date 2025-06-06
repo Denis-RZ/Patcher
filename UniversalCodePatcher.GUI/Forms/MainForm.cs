@@ -141,9 +141,8 @@ namespace UniversalCodePatcher.Forms
                 var result = await Task.Run(() =>
                     DiffApplier.ApplyDiff(tempDiffFile, folderBox.Text, backupRoot, dryRunCheckBox.Checked));
 
-                var modified = result.Metadata.TryGetValue("PatchedFiles", out var patchedObj) && patchedObj is List<string> list
-                    ? list
-                    : new List<string>();
+                result.Metadata.TryGetValue("PatchedFiles", out var patchedObj);
+                var modified = patchedObj as List<string> ?? new List<string>();
                 logBox.AppendText($"Modified: {string.Join(", ", modified)}{Environment.NewLine}");
  
                 if (!applyCts.IsCancellationRequested)
