@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Windows.Forms;
 using UniversalCodePatcher.DiffEngine;
 using UniversalCodePatcher;
@@ -21,6 +22,7 @@ namespace UniversalCodePatcher.Forms
         private RichTextBox logBox = new() { ReadOnly = true, Dock = DockStyle.Bottom, Height = 150 };
         private ProgressBar progress = new() { Dock = DockStyle.Bottom };
         private ILogger logger = new SimpleLogger();
+        private CancellationTokenSource? patchCts;
 
         public PatchForm()
         {
@@ -91,12 +93,22 @@ namespace UniversalCodePatcher.Forms
             Directory.CreateDirectory(backup);
             progress.Maximum = diffs.Count;
             progress.Value = 0;
-            foreach (var diff in diffs)
+            patchCts = new CancellationTokenSource();
+            var token = patchCts.Token;
+            try
             {
-                await System.Threading.Tasks.Task.Run(() => DiffApplier.ApplyDiff(diff, rootTextBox.Text, backup, dryRunCheckBox.Checked));
-                progress.Value += 1;
+                foreach (var diff in diffs)
+                {
+                    await System.Threading.Tasks.Task.Run(() =>
+                        DiffApplier.ApplyDiff(diff, rootTextBox.Text, backup, dryRunCheckBox.Checked, token), token);
+                    progress.Value += 1;
+                }
+                logBox.AppendText("Done\n");
             }
-            logBox.AppendText("Done\n");
+            finally
+            {
+                patchCts = null;
+            }
         }
     }
 }
