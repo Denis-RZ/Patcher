@@ -138,8 +138,9 @@ namespace UniversalCodePatcher.Forms
             {
                 File.WriteAllText(tempDiffFile, diffBox.Text);
 
+                var token = applyCts.Token;
                 var result = await Task.Run(() =>
-                    DiffApplier.ApplyDiff(tempDiffFile, folderBox.Text, backupRoot, dryRunCheckBox.Checked));
+                    DiffApplier.ApplyDiff(tempDiffFile, folderBox.Text, backupRoot, dryRunCheckBox.Checked, token), token);
 
                 result.Metadata.TryGetValue("PatchedFiles", out var patchedObj);
                 var modified = patchedObj as List<string> ?? new List<string>();
