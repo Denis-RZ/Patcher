@@ -14,7 +14,10 @@ namespace UniversalCodePatcher.Models
         public List<string> Warnings { get; set; } = new();
         public int ElementsModified { get; set; }
         public TimeSpan Duration { get; set; }
-        public Dictionary<string, object> Metadata { get; set; } = new();
+        /// <summary>
+        /// Additional data produced during patching
+        /// </summary>
+        public PatchMetadata Metadata { get; set; } = new();
     }
     
     /// <summary>
