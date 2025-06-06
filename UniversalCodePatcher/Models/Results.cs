@@ -17,7 +17,9 @@ namespace UniversalCodePatcher.Models
         /// <summary>
         /// Additional data produced during patching
         /// </summary>
-        public IDictionary<string, object> Metadata { get; } = new Dictionary<string, object>();
+ 
+        public PatchMetadata Metadata { get; set; } = new();
+ 
     }
     
     /// <summary>
