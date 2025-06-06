@@ -64,13 +64,20 @@ namespace UniversalCodePatcher.Forms
             {
                 var patch = parser.Parse(diffBox.Text);
                 if (patch.Files.Count > 0)
+                {
                     diffStatusLabel.Text = $"\u2714 Valid diff - {patch.Files.Count} files";
+                    diffStatusLabel.ForeColor = Color.FromArgb(22, 198, 12);
+                }
                 else
+                {
                     diffStatusLabel.Text = "\u274C Invalid diff";
+                    diffStatusLabel.ForeColor = Color.FromArgb(231, 72, 86);
+                }
             }
             catch
             {
                 diffStatusLabel.Text = "\u274C Invalid diff";
+                diffStatusLabel.ForeColor = Color.FromArgb(231, 72, 86);
             }
         }
 
