@@ -4,6 +4,13 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Windows.Forms;
+using UniversalCodePatcher.Core;
+using UniversalCodePatcher.Interfaces;
+using UniversalCodePatcher.Modules.JavaScriptModule;
+using UniversalCodePatcher.Modules.CSharpModule;
+using UniversalCodePatcher.Modules.BackupModule;
+using UniversalCodePatcher.Modules.DiffModule;
+using UniversalCodePatcher.Models;
 
 namespace UniversalCodePatcher.Forms
 {
@@ -34,9 +41,41 @@ namespace UniversalCodePatcher.Forms
         private ToolStripStatusLabel infoLabel = null!;
         private string? projectPath;
 
+        private UniversalCodePatcher.Core.ServiceContainer services = null!;
+        private UniversalCodePatcher.Core.ModuleManager moduleManager = null!;
+        private Dictionary<string, UniversalCodePatcher.Interfaces.IPatcher> patchersByLang = new();
+        private UniversalCodePatcher.Modules.BackupModule.BackupModule? backupModule;
+        private UniversalCodePatcher.Interfaces.IDiffEngine diffEngine = null!;
+        private string? currentFile;
+
         public MainForm()
         {
             InitializeComponent();
+            InitializeBusinessLogic();
+        }
+
+        private void InitializeBusinessLogic()
+        {
+            services = new ServiceContainer();
+            moduleManager = new ModuleManager(services);
+            moduleManager.ModuleError += (_, e) => MessageBox.Show(e.Error);
+            moduleManager.LoadModule(typeof(JavaScriptModule));
+            moduleManager.LoadModule(typeof(CSharpModule));
+            moduleManager.LoadModule(typeof(BackupModule));
+
+            foreach (var module in moduleManager.LoadedModules)
+            {
+                if (module is BackupModule bm)
+                    backupModule = bm;
+
+                if (module is IPatcher p && module is ICodeAnalyzer analyzer)
+                {
+                    foreach (var lang in analyzer.SupportedLanguages)
+                        patchersByLang[lang] = p;
+                }
+            }
+
+            diffEngine = new DiffModule(services);
         }
 
         private void InitializeComponent()
@@ -315,6 +354,7 @@ namespace UniversalCodePatcher.Forms
                     sourceBox.Text = System.IO.File.ReadAllText(file);
                     previewBox.Clear();
                     statusLabel.Text = file;
+                    currentFile = file;
                 }
                 catch (Exception ex)
                 {
@@ -325,20 +365,30 @@ namespace UniversalCodePatcher.Forms
 
         private void OnPreview(object? sender, EventArgs e)
         {
+            if (currentFile == null) return;
+            var language = GetLanguageFromFile(currentFile);
+            if (!patchersByLang.TryGetValue(language, out var patcher))
+            {
+                MessageBox.Show($"No patcher for language {language}");
+                return;
+            }
+
             var text = sourceBox.Text;
             foreach (DataGridViewRow row in rulesGrid.Rows)
             {
+                if (row.IsNewRow) continue;
                 if (row.Cells[1].Value is string pattern && !string.IsNullOrEmpty(pattern))
                 {
                     var replace = row.Cells[2].Value?.ToString() ?? string.Empty;
-                    try
+                    var rule = new PatchRule
                     {
-                        text = System.Text.RegularExpressions.Regex.Replace(text, pattern, replace);
-                    }
-                    catch (Exception ex)
-                    {
-                        MessageBox.Show($"Rule error: {ex.Message}");
-                    }
+                        Name = row.Cells[0].Value?.ToString() ?? "Rule",
+                        TargetPattern = pattern,
+                        NewContent = replace,
+                        PatchType = PatchType.Replace,
+                        TargetLanguage = language
+                    };
+                    text = patcher.PreviewPatch(text, rule, language);
                 }
             }
             previewBox.Text = text;
@@ -356,29 +406,43 @@ namespace UniversalCodePatcher.Forms
                 return;
             foreach (TreeNode node in EnumerateNodes(projectTree.Nodes[0]))
             {
-                if (!node.Checked || node.Tag is not string file || !System.IO.File.Exists(file))
+                if (!node.Checked || node.Tag is not string file || !File.Exists(file))
                     continue;
 
-                var original = System.IO.File.ReadAllText(file);
+                var language = GetLanguageFromFile(file);
+                if (!patchersByLang.TryGetValue(language, out var patcher))
+                {
+                    var item = resultsList.Items.Add(file);
+                    item.SubItems.Add("Skipped");
+                    item.SubItems.Add("0");
+                    item.SubItems.Add($"No patcher for {language}");
+                    continue;
+                }
+
+                var original = File.ReadAllText(file);
                 var text = original;
                 foreach (DataGridViewRow row in rulesGrid.Rows)
                 {
+                    if (row.IsNewRow) continue;
                     if (row.Cells[1].Value is string pattern && !string.IsNullOrEmpty(pattern))
                     {
                         var replace = row.Cells[2].Value?.ToString() ?? string.Empty;
-                        try
+                        var rule = new PatchRule
                         {
-                            text = System.Text.RegularExpressions.Regex.Replace(text, pattern, replace);
-                        }
-                        catch (Exception ex)
-                        {
-                            MessageBox.Show($"Rule error: {ex.Message}");
-                        }
+                            Name = row.Cells[0].Value?.ToString() ?? "Rule",
+                            TargetPattern = pattern,
+                            NewContent = replace,
+                            PatchType = PatchType.Replace,
+                            TargetLanguage = language
+                        };
+                        var result = patcher.ApplyPatch(text, rule, language);
+                        text = result.ModifiedCode;
                     }
                 }
                 try
                 {
-                    System.IO.File.WriteAllText(file, text);
+                    backupModule?.CreateBackup(file);
+                    File.WriteAllText(file, text);
                     var item = resultsList.Items.Add(file);
                     item.SubItems.Add("OK");
                     item.SubItems.Add((text == original ? "0" : "1"));
@@ -393,6 +457,18 @@ namespace UniversalCodePatcher.Forms
                 }
             }
             statusLabel.Text = "Patching complete";
+        }
+
+        private string GetLanguageFromFile(string file)
+        {
+            var ext = Path.GetExtension(file).ToLowerInvariant();
+            return ext switch
+            {
+                ".cs" => "CSharp",
+                ".js" => "JavaScript",
+                ".ts" => "TypeScript",
+                _ => "Unknown"
+            };
         }
 
         private IEnumerable<TreeNode> EnumerateNodes(TreeNode node)
