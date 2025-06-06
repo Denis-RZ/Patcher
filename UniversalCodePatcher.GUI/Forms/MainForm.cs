@@ -33,9 +33,14 @@ namespace UniversalCodePatcher.Forms
         private MenuStrip menuStrip = null!;
         private ToolStrip toolStrip = null!;
         private StatusStrip statusStrip = null!;
-        private TableLayoutPanel mainLayout = null!;
+        private SplitContainer mainSplit = null!;
         private Panel navigationPanel = null!;
-        private Panel contentPanel = null!;
+        private TabControl tabControl = null!;
+        private TabPage diffPage = null!;
+        private TabPage targetPage = null!;
+        private TabPage filesPage = null!;
+        private TabPage rulesPage = null!;
+        private TabPage resultsPage = null!;
         private Panel inputCard = null!;
         private Panel targetCard = null!;
         private Panel actionCard = null!;
@@ -296,14 +301,14 @@ namespace UniversalCodePatcher.Forms
             };
             statusStrip.Items.Add(new ToolStripStatusLabel("Ready"));
 
-            mainLayout = new TableLayoutPanel
+            mainSplit = new SplitContainer
             {
                 Dock = DockStyle.Fill,
-                ColumnCount = 2,
-                Padding = new Padding(16)
+                SplitterDistance = 200,
+                SplitterWidth = 5,
+                FixedPanel = FixedPanel.Panel1,
+                BackColor = Color.FromArgb(30, 30, 30)
             };
-            mainLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 200));
-            mainLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
 
             navigationPanel = new Panel
             {
@@ -330,11 +335,12 @@ namespace UniversalCodePatcher.Forms
             navigationPanel.Controls.Add(navHeader);
             navigationPanel.Controls.SetChildIndex(navHeader, 0);
 
-            contentPanel = new Panel
-            {
-                Dock = DockStyle.Fill,
-                AutoScroll = true
-            };
+            tabControl = new TabControl { Dock = DockStyle.Fill };
+            diffPage = new TabPage("Diff") { BackColor = Color.FromArgb(45, 45, 45), ForeColor = Color.White };
+            targetPage = new TabPage("Project") { BackColor = Color.FromArgb(45, 45, 45), ForeColor = Color.White };
+            filesPage = new TabPage("Files") { BackColor = Color.FromArgb(45, 45, 45), ForeColor = Color.White };
+            rulesPage = new TabPage("Rules") { BackColor = Color.FromArgb(45, 45, 45), ForeColor = Color.White };
+            resultsPage = new TabPage("Results") { BackColor = Color.FromArgb(45, 45, 45), ForeColor = Color.White };
 
             // input card
             inputCard = new Panel
@@ -548,15 +554,18 @@ namespace UniversalCodePatcher.Forms
             resultsCard.Controls.Add(resultsHeader);
             resultsCard.Controls.SetChildIndex(resultsHeader, 0);
 
-            contentPanel.Controls.Add(resultsCard);
-            contentPanel.Controls.Add(actionCard);
-            contentPanel.Controls.Add(ruleCard);
-            contentPanel.Controls.Add(scanCard);
-            contentPanel.Controls.Add(targetCard);
-            contentPanel.Controls.Add(inputCard);
+            diffPage.Controls.Add(inputCard);
+            targetPage.Controls.Add(targetCard);
+            filesPage.Controls.Add(scanCard);
+            rulesPage.Controls.Add(ruleCard);
+            resultsPage.Controls.Add(actionCard);
+            resultsPage.Controls.Add(resultsCard);
+            resultsPage.Controls.SetChildIndex(actionCard, 0);
 
-            mainLayout.Controls.Add(navigationPanel, 0, 0);
-            mainLayout.Controls.Add(contentPanel, 1, 0);
+            tabControl.TabPages.AddRange(new[] { diffPage, targetPage, filesPage, rulesPage, resultsPage });
+
+            mainSplit.Panel1.Controls.Add(navigationPanel);
+            mainSplit.Panel2.Controls.Add(tabControl);
 
             browseDiffButton.Click += OnBrowseDiff;
             applyButton.Click += OnApply;
@@ -572,7 +581,7 @@ namespace UniversalCodePatcher.Forms
             ForeColor = Color.White;
             BackColor = Color.FromArgb(30, 30, 30);
             StartPosition = FormStartPosition.CenterScreen;
-            Controls.Add(mainLayout);
+            Controls.Add(mainSplit);
             Controls.Add(statusStrip);
             Controls.Add(toolStrip);
             Controls.Add(menuStrip);
