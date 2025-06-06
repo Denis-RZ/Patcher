@@ -56,7 +56,7 @@ namespace UniversalCodePatcher.Forms
             fileMenu.DropDownItems.Add(new ToolStripSeparator());
             fileMenu.DropDownItems.Add("Exit", null, (s, e) => Close());
             var editMenu = new ToolStripMenuItem("Edit");
-            editMenu.DropDownItems.AddRange(new[]
+            editMenu.DropDownItems.AddRange(new ToolStripItem[]
             {
                 new ToolStripMenuItem("Undo"),
                 new ToolStripMenuItem("Redo"),
@@ -67,21 +67,21 @@ namespace UniversalCodePatcher.Forms
                 new ToolStripMenuItem("Find")
             });
             var viewMenu = new ToolStripMenuItem("View");
-            viewMenu.DropDownItems.AddRange(new[]
+            viewMenu.DropDownItems.AddRange(new ToolStripItem[]
             {
                 new ToolStripMenuItem("Refresh"),
                 new ToolStripMenuItem("Show All Files"),
                 new ToolStripMenuItem("Expand Tree")
             });
             var toolsMenu = new ToolStripMenuItem("Tools");
-            toolsMenu.DropDownItems.AddRange(new[]
+            toolsMenu.DropDownItems.AddRange(new ToolStripItem[]
             {
                 new ToolStripMenuItem("Options"),
                 new ToolStripMenuItem("Backup Manager"),
                 new ToolStripMenuItem("Module Settings")
             });
             var helpMenu = new ToolStripMenuItem("Help");
-            helpMenu.DropDownItems.AddRange(new[]
+            helpMenu.DropDownItems.AddRange(new ToolStripItem[]
             {
                 new ToolStripMenuItem("Documentation"),
                 new ToolStripMenuItem("About")
