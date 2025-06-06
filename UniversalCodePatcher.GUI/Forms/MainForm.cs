@@ -221,6 +221,11 @@ namespace UniversalCodePatcher.Forms
             previewTab.Controls.Add(previewBox);
             rulesTab.Controls.Add(rulesGrid);
             tabControl.TabPages.AddRange(new[] { sourceTab, previewTab, rulesTab });
+
+            // ensure source tab visible/enabled
+            sourceTab.Enabled = true;
+            sourceBox.Visible = true;
+
             horizontalSplit.Panel1.Controls.Add(tabControl);
 
             // Results group
