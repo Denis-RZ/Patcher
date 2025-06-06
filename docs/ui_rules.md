@@ -1,0 +1,11 @@
+- Default form size 800×600, dark theme (30,30,30) with 16px border padding.
+- Use panels as "cards": 16px padding inside, 16px bottom margin, background 45,45,45.
+- Place controls in TableLayoutPanel or FlowLayoutPanel; Dock to Fill or Top as needed.
+- 12pt "Segoe UI" bold for headers, 10pt regular for other text.
+- Buttons 40px high; checkboxes and labels align vertically with 8px spacing.
+- Use auto-sizing and percent-based rows/columns to handle resizing.
+- Name controls in camelCase with meaningful suffix (previewButton, logBox).
+- Prefix event handlers with On for clarity (OnApply, OnUndo).
+- Keep consistent 16px spacing between group panels.
+- Provide placeholder text for input boxes and confirm actions via message dialogs.
+- Start forms centered on screen.
