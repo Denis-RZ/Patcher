@@ -214,13 +214,23 @@ namespace UniversalCodePatcher.Forms
             sourceTab = new TabPage("Source Code");
             previewTab = new TabPage("Preview Changes");
             rulesTab = new TabPage("Patch Rules");
-            sourceBox = new RichTextBox { Dock = DockStyle.Fill, ReadOnly = true, Font = new Font("Consolas", 9F) };
+            sourceBox = new RichTextBox
+            {
+                Dock = DockStyle.Fill,
+                ReadOnly = false,
+                Font = new Font("Consolas", 9F)
+            };
             previewBox = new RichTextBox { Dock = DockStyle.Fill, ReadOnly = true, Font = new Font("Consolas", 9F) };
             rulesGrid = new DataGridView { Dock = DockStyle.Fill };
             sourceTab.Controls.Add(sourceBox);
             previewTab.Controls.Add(previewBox);
             rulesTab.Controls.Add(rulesGrid);
             tabControl.TabPages.AddRange(new[] { sourceTab, previewTab, rulesTab });
+
+            // ensure source tab visible/enabled
+            sourceTab.Enabled = true;
+            sourceBox.Visible = true;
+
             horizontalSplit.Panel1.Controls.Add(tabControl);
 
             // Results group
@@ -236,7 +246,8 @@ namespace UniversalCodePatcher.Forms
             actionFlow = new FlowLayoutPanel
             {
                 Dock = DockStyle.Right,
-                FlowDirection = FlowDirection.RightToLeft
+                FlowDirection = FlowDirection.RightToLeft,
+                WrapContents = false
             };
             applyButton = new Button { Text = "Apply Patches", Size = new Size(90, 23), Margin = new Padding(3) };
             previewButton = new Button { Text = "Preview", Size = new Size(75, 23), Margin = new Padding(3) };
