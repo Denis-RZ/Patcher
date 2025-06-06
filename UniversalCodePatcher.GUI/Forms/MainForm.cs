@@ -1,5 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.Drawing;
+using System.IO;
+using System.Linq;
 using System.Windows.Forms;
 
 namespace UniversalCodePatcher.Forms
@@ -29,6 +32,7 @@ namespace UniversalCodePatcher.Forms
         private ToolStripStatusLabel statusLabel = null!;
         private ToolStripProgressBar progressBar = null!;
         private ToolStripStatusLabel infoLabel = null!;
+        private string? projectPath;
 
         public MainForm()
         {
@@ -214,6 +218,192 @@ namespace UniversalCodePatcher.Forms
 
             ResumeLayout(false);
             PerformLayout();
+
+            // sample tree structure
+            LoadSampleTree();
+
+            // wire events
+            previewButton.Click += OnPreview;
+            applyButton.Click += OnApplyPatches;
+            projectTree.AfterSelect += OnTreeAfterSelect;
+
+            var fileMenu = menuStrip.Items[0] as ToolStripMenuItem;
+            if (fileMenu != null)
+            {
+                foreach (ToolStripItem item in fileMenu.DropDownItems)
+                {
+                    if (item.Text == "Open Project")
+                        item.Click += OnOpenProject;
+                }
+            }
+
+            // configure grids and lists
+            rulesGrid.Columns.Add("Rule", "Rule");
+            rulesGrid.Columns.Add("Pattern", "Pattern");
+            rulesGrid.Columns.Add("Replacement", "Replacement");
+
+            resultsList.Columns.Add("File", 250);
+            resultsList.Columns.Add("Status", 80);
+            resultsList.Columns.Add("Changes", 80);
+            resultsList.Columns.Add("Result", 120);
         }
+
+        private void LoadSampleTree()
+        {
+            projectTree.Nodes.Clear();
+            var root = projectTree.Nodes.Add("SampleProject");
+            root.Nodes.Add("Program.cs");
+            var folder = root.Nodes.Add("SubFolder");
+            folder.Nodes.Add("Class1.cs");
+            folder.Nodes.Add("Class2.cs");
+            root.ExpandAll();
+        }
+
+        private void OnOpenProject(object? sender, EventArgs e)
+        {
+            using var dlg = new FolderBrowserDialog();
+            if (dlg.ShowDialog() == DialogResult.OK)
+            {
+                projectPath = dlg.SelectedPath;
+                LoadProject(dlg.SelectedPath);
+            }
+        }
+
+        private void LoadProject(string path)
+        {
+            try
+            {
+                projectTree.BeginUpdate();
+                projectTree.Nodes.Clear();
+                var rootDir = new System.IO.DirectoryInfo(path);
+                var rootNode = projectTree.Nodes.Add(rootDir.Name);
+                AddDirectoryNodes(rootDir, rootNode);
+                rootNode.Expand();
+                infoLabel.Text = $"Files: {projectTree.GetNodeCount(true)}";
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to load project: {ex.Message}");
+            }
+            finally
+            {
+                projectTree.EndUpdate();
+            }
+        }
+
+        private void AddDirectoryNodes(System.IO.DirectoryInfo dir, TreeNode parent)
+        {
+            foreach (var sub in dir.GetDirectories())
+            {
+                var node = parent.Nodes.Add(sub.Name);
+                node.Tag = sub.FullName;
+                AddDirectoryNodes(sub, node);
+            }
+            foreach (var file in dir.GetFiles())
+            {
+                var node = parent.Nodes.Add(file.Name);
+                node.Tag = file.FullName;
+            }
+        }
+
+        private void OnTreeAfterSelect(object? sender, TreeViewEventArgs e)
+        {
+            if (e.Node?.Tag is string file && System.IO.File.Exists(file))
+            {
+                try
+                {
+                    sourceBox.Text = System.IO.File.ReadAllText(file);
+                    previewBox.Clear();
+                    statusLabel.Text = file;
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Error loading file: {ex.Message}");
+                }
+            }
+        }
+
+        private void OnPreview(object? sender, EventArgs e)
+        {
+            var text = sourceBox.Text;
+            foreach (DataGridViewRow row in rulesGrid.Rows)
+            {
+                if (row.Cells[1].Value is string pattern && !string.IsNullOrEmpty(pattern))
+                {
+                    var replace = row.Cells[2].Value?.ToString() ?? string.Empty;
+                    try
+                    {
+                        text = System.Text.RegularExpressions.Regex.Replace(text, pattern, replace);
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show($"Rule error: {ex.Message}");
+                    }
+                }
+            }
+            previewBox.Text = text;
+            tabControl.SelectedTab = previewTab;
+        }
+
+        private void OnApplyPatches(object? sender, EventArgs e)
+        {
+            if (projectPath == null) return;
+            if (MessageBox.Show("Apply patches to selected files?", "Confirm", MessageBoxButtons.OKCancel) != DialogResult.OK)
+                return;
+
+            resultsList.Items.Clear();
+            if (projectTree.Nodes.Count == 0)
+                return;
+            foreach (TreeNode node in EnumerateNodes(projectTree.Nodes[0]))
+            {
+                if (!node.Checked || node.Tag is not string file || !System.IO.File.Exists(file))
+                    continue;
+
+                var original = System.IO.File.ReadAllText(file);
+                var text = original;
+                foreach (DataGridViewRow row in rulesGrid.Rows)
+                {
+                    if (row.Cells[1].Value is string pattern && !string.IsNullOrEmpty(pattern))
+                    {
+                        var replace = row.Cells[2].Value?.ToString() ?? string.Empty;
+                        try
+                        {
+                            text = System.Text.RegularExpressions.Regex.Replace(text, pattern, replace);
+                        }
+                        catch (Exception ex)
+                        {
+                            MessageBox.Show($"Rule error: {ex.Message}");
+                        }
+                    }
+                }
+                try
+                {
+                    System.IO.File.WriteAllText(file, text);
+                    var item = resultsList.Items.Add(file);
+                    item.SubItems.Add("OK");
+                    item.SubItems.Add((text == original ? "0" : "1"));
+                    item.SubItems.Add("Patched");
+                }
+                catch (Exception ex)
+                {
+                    var item = resultsList.Items.Add(file);
+                    item.SubItems.Add("Error");
+                    item.SubItems.Add("0");
+                    item.SubItems.Add(ex.Message);
+                }
+            }
+            statusLabel.Text = "Patching complete";
+        }
+
+        private IEnumerable<TreeNode> EnumerateNodes(TreeNode node)
+        {
+            yield return node;
+            foreach (TreeNode child in node.Nodes)
+            {
+                foreach (var n in EnumerateNodes(child))
+                    yield return n;
+            }
+        }
+
     }
 }
