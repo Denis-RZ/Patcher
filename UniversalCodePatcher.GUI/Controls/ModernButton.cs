@@ -9,7 +9,8 @@ namespace UniversalCodePatcher.Controls
     /// </summary>
     public class ModernButton : Button
     {
-        public Color AccentColor { get; set; } = Color.FromArgb(66, 153, 225);
+        // Default accent color uses modern Microsoft blue
+        public Color AccentColor { get; set; } = Color.FromArgb(0, 120, 212);
 
         public bool ShowIcon { get; set; } = true;
 
