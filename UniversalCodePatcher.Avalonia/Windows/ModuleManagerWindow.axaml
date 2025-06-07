@@ -1,10 +1,17 @@
 <local:BaseDialog xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:UniversalCodePatcher.Avalonia"
+        xmlns:interfaces="clr-namespace:UniversalCodePatcher.Interfaces;assembly=UniversalCodePatcher"
         x:Class="UniversalCodePatcher.Avalonia.ModuleManagerWindow"
         Width="400" Height="300" Title="Module Manager">
   <Grid RowDefinitions="*,Auto" Margin="10">
-    <ListBox x:Name="ModuleList" SelectionMode="Multiple" />
+    <ListBox x:Name="ModuleList" SelectionMode="Multiple">
+      <ListBox.ItemTemplate>
+        <DataTemplate x:DataType="interfaces:IModule">
+          <TextBlock Text="{Binding Name}"/>
+        </DataTemplate>
+      </ListBox.ItemTemplate>
+    </ListBox>
     <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
       <Button Content="Unload" Width="80" Click="OnUnload"/>
       <Button Content="Close" Width="80" Click="OnClose" IsCancel="True"/>

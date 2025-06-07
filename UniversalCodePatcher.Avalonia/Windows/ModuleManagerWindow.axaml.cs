@@ -15,7 +15,6 @@ public partial class ModuleManagerWindow : BaseDialog
     {
         _manager = manager;
         InitializeComponent();
-        ModuleList.DisplayMemberPath = "Name";
         foreach (var m in _manager.LoadedModules)
             ModuleList.Items.Add(m);
     }
