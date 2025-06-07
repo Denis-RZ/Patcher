@@ -12,15 +12,33 @@
         <MenuItem Header="_New Project" Click="OnNewProject"/>
         <MenuItem Header="_Open Project" Click="OnOpenProject"/>
         <MenuItem Header="_Save" Click="OnSaveProject"/>
+ 
+        <MenuItem x:Name="RecentMenu" Header="Recent Projects"/>
+ 
         <Separator/>
         <MenuItem Header="E_xit" Click="OnExit"/>
       </MenuItem>
       <MenuItem Header="_Edit">
         <MenuItem Header="_Undo" Click="OnUndo"/>
         <MenuItem Header="_Redo" Click="OnRedo"/>
+ 
+        <MenuItem Header="Select _All Files" Click="OnSelectAllFiles"/>
+        <MenuItem Header="_Find in Files" Click="OnFindInFiles"/>
+      </MenuItem>
+      <MenuItem Header="_View">
+        <MenuItem Header="_Refresh" Click="OnRefresh"/>
+        <MenuItem x:Name="HiddenToggle" Header="Show Hidden Files" Click="OnToggleHidden"/>
+        <MenuItem Header="Expand All" Click="OnExpandAll"/>
+        <MenuItem Header="Collapse All" Click="OnCollapseAll"/>
+      </MenuItem>
+      <MenuItem Header="_Tools">
+        <MenuItem Header="_Settings" Click="OnSettings"/>
+        <MenuItem Header="_Backup Manager" Click="OnBackupManager"/>
+        <MenuItem Header="_Module Manager" Click="OnModuleManager"/>
       </MenuItem>
       <MenuItem Header="_Help">
         <MenuItem Header="_About" Click="OnAbout"/>
+        <MenuItem Header="_Documentation" Click="OnDocumentation"/>
       </MenuItem>
     </Menu>
     <Border DockPanel.Dock="Bottom" Background="#EEE" Padding="4">
