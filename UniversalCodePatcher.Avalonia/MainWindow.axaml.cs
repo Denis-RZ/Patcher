@@ -16,6 +16,7 @@ using UniversalCodePatcher.Modules.CSharpModule;
 using UniversalCodePatcher.Modules.BackupModule;
 using UniversalCodePatcher.Modules.DiffModule;
 using UniversalCodePatcher.Models;
+using UniversalCodePatcher.Avalonia.Models;
 
 namespace UniversalCodePatcher.Avalonia;
 
@@ -32,10 +33,16 @@ public partial class MainWindow : Window
     private BackupModule? _backupModule;
     private IDiffEngine _diffEngine;
     private string? _currentFile;
+    private readonly AppSettings _settings;
+
+    private static readonly string SettingsFile = Path.Combine(AppContext.BaseDirectory, "appsettings.json");
 
     public MainWindow()
     {
         InitializeComponent();
+
+        _settings = AppSettings.Load(SettingsFile);
+        _showHiddenFiles = _settings.ShowHiddenFiles;
 
  
         // set window icon from embedded Base64 PNG to avoid binary resources
@@ -201,6 +208,8 @@ public partial class MainWindow : Window
     private void OnToggleHidden(object? sender, RoutedEventArgs e)
     {
         _showHiddenFiles = !_showHiddenFiles;
+        _settings.ShowHiddenFiles = _showHiddenFiles;
+        _settings.Save(SettingsFile);
         if (_projectPath != null)
             LoadProject(_projectPath);
     }
@@ -278,6 +287,7 @@ public partial class MainWindow : Window
         base.OnClosed(e);
         var recentFile = Path.Combine(AppContext.BaseDirectory, "recent.txt");
         File.WriteAllLines(recentFile, _recent.Take(5));
+        _settings.Save(SettingsFile);
     }
 
     private string GetLanguageFromFile(string file)
@@ -314,8 +324,15 @@ public partial class MainWindow : Window
 
     private async void OnOptions(object? sender, RoutedEventArgs e)
     {
-        var dlg = new SettingsWindow();
-        await dlg.ShowDialog(this);
+        var dlg = new SettingsWindow(_settings);
+        var result = await dlg.ShowDialog<bool?>(this);
+        if (result == true)
+        {
+            _showHiddenFiles = _settings.ShowHiddenFiles;
+            if (_projectPath != null)
+                LoadProject(_projectPath);
+            _settings.Save(SettingsFile);
+        }
     }
 
     private async void OnBackupManager(object? sender, RoutedEventArgs e)
