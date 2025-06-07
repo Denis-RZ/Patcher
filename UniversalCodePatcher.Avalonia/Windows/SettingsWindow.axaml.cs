@@ -9,7 +9,7 @@ public partial class SettingsWindow : BaseDialog
 {
     private readonly AppSettings _settings;
 
-    // Parameterless constructor required for XAML designer
+     // Parameterless constructor required for XAML designer
     public SettingsWindow() : this(new AppSettings())
     {
     }
