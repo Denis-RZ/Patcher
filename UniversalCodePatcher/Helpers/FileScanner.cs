@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace UniversalCodePatcher.Helpers
 {
@@ -18,6 +19,11 @@ namespace UniversalCodePatcher.Helpers
                 if (includeExtensions.Contains(Path.GetExtension(file), comparer))
                     yield return file;
             }
+        }
+
+        public static Task<List<string>> FindPatchableFilesAsync(string rootFolder, IReadOnlyCollection<string> includeExtensions, IReadOnlyCollection<string> excludeFolderNames)
+        {
+            return Task.Run(() => FindPatchableFiles(rootFolder, includeExtensions, excludeFolderNames).ToList());
         }
     }
 }

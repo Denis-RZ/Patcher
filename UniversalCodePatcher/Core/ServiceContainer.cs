@@ -1,67 +1,66 @@
-﻿using System;
-using System.Collections.Concurrent;
+using System;
+using System.Linq;
+using Microsoft.Extensions.DependencyInjection;
 using UniversalCodePatcher.Interfaces;
-using UniversalCodePatcher;
 
 namespace UniversalCodePatcher.Core
 {
     /// <summary>
-    /// Простой DI контейнер для управления зависимостями
+    /// Simple wrapper over Microsoft.Extensions.DependencyInjection
     /// </summary>
-    public class ServiceContainer : IServiceContainer
+    public class ServiceContainer : IServiceContainer, IDisposable
     {
-        private readonly ConcurrentDictionary<Type, object> _services = new();
-        private readonly ConcurrentDictionary<Type, Func<object>> _factories = new();
+        private readonly ServiceCollection _collection = new();
+        private ServiceProvider? _provider;
 
         public ServiceContainer()
         {
-            _services[typeof(ILogger)] = new SimpleLogger();
+            _collection.AddSingleton<ILogger, SimpleLogger>();
         }
-        
+
+        private ServiceProvider Provider => _provider ??= _collection.BuildServiceProvider();
+
         public void RegisterSingleton<TInterface, TImplementation>()
             where TImplementation : class, TInterface
             where TInterface : class
         {
-            _factories[typeof(TInterface)] = () => Activator.CreateInstance<TImplementation>();
+            _collection.AddSingleton<TInterface, TImplementation>();
+            _provider = null;
         }
-        
+
         public void RegisterInstance<T>(T instance) where T : class
         {
-            _services[typeof(T)] = instance;
+            _collection.AddSingleton(instance);
+            _provider = null;
         }
-        
+
         public T GetService<T>() where T : class
         {
-            return (T)GetService(typeof(T));
+            return Provider.GetRequiredService<T>();
         }
-        
+
         public object GetService(Type serviceType)
         {
-            // Проверяем, есть ли уже созданный экземпляр
-            if (_services.TryGetValue(serviceType, out var existingService))
-            {
-                return existingService;
-            }
-            
-            // Создаем новый экземпляр если есть фабрика
-            if (_factories.TryGetValue(serviceType, out var factory))
-            {
-                var newService = factory();
-                _services[serviceType] = newService;
-                return newService;
-            }
-            
-            throw new InvalidOperationException($"Service of type {serviceType.Name} is not registered");
+            return Provider.GetRequiredService(serviceType);
         }
-        
+
         public bool IsRegistered<T>() where T : class
         {
             return IsRegistered(typeof(T));
         }
-        
+
         public bool IsRegistered(Type serviceType)
         {
-            return _services.ContainsKey(serviceType) || _factories.ContainsKey(serviceType);
+            return _collection.Any(sd => sd.ServiceType == serviceType);
+        }
+
+        public void Dispose()
+        {
+            if (_provider is IDisposable disposable)
+            {
+                disposable.Dispose();
+                _provider = null;
+            }
         }
     }
 }
