@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
+using System;
 
 namespace UniversalCodePatcher.Avalonia;
 
@@ -24,5 +25,15 @@ public partial class NewProjectWindow : BaseDialog
             PathBox.Text = folder[0].Path.LocalPath;
     }
 
-    private void OnOk(object? sender, RoutedEventArgs e) => SetOKResult();
+    private void OnOk(object? sender, RoutedEventArgs e)
+    {
+        Console.WriteLine($"New project created: {ProjectName} at {ProjectPath}");
+        SetOKResult();
+    }
+
+    private void OnCancel(object? sender, RoutedEventArgs e)
+    {
+        Console.WriteLine("New project creation cancelled");
+        SetCancelResult();
+    }
 }

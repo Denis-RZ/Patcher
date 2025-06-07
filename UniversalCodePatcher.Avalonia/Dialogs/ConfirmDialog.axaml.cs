@@ -1,6 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using System.Threading.Tasks;
+using System;
 
 namespace UniversalCodePatcher.Avalonia;
 
@@ -20,6 +21,15 @@ public partial class ConfirmDialog : BaseDialog
         return dlg.DialogResult;
     }
 
-    private void OnOk(object? sender, RoutedEventArgs e) => SetOKResult();
-    private void OnCancel(object? sender, RoutedEventArgs e) => SetCancelResult();
+    private void OnOk(object? sender, RoutedEventArgs e)
+    {
+        Console.WriteLine("Confirm dialog accepted");
+        SetOKResult();
+    }
+
+    private void OnCancel(object? sender, RoutedEventArgs e)
+    {
+        Console.WriteLine("Confirm dialog cancelled");
+        SetCancelResult();
+    }
 }

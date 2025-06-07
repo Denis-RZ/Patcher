@@ -53,8 +53,12 @@ Intelligent multi-language code patcher with modular architecture.
 
 ## Avalonia Windows
 
-All Avalonia dialogs now include proper OK or Cancel buttons. The following windows were audited and fixed:
+Avalonia dialogs were audited to ensure buttons close their windows and inputs are connected. Debug output was added to verify each handler. Audited windows:
 - BackupManagerWindow
 - ModuleManagerWindow
 - SettingsWindow
 - FindWindow
+- NewProjectWindow
+- AboutWindow and simple dialogs (Confirm, Info, Error)
+
+Some windows still use placeholder data and may need further binding to view models.

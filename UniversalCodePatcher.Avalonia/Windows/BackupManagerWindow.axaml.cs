@@ -2,6 +2,7 @@ using Avalonia.Controls;
 using Avalonia.Interactivity;
 using System.IO;
 using System.Linq;
+using System;
 
 namespace UniversalCodePatcher.Avalonia;
 
@@ -19,5 +20,9 @@ public partial class BackupManagerWindow : BaseDialog
         }
     }
 
-    private void OnClose(object? sender, RoutedEventArgs e) => SetCancelResult();
+    private void OnClose(object? sender, RoutedEventArgs e)
+    {
+        Console.WriteLine("Backup manager closed");
+        SetCancelResult();
+    }
 }

@@ -20,6 +20,7 @@ public partial class FindWindow : BaseDialog
 
     private void OnSearch(object? sender, RoutedEventArgs e)
     {
+        Console.WriteLine($"Searching '{SearchBox.Text}' in {_root}");
         ResultsList.Items.Clear();
         if (!string.IsNullOrWhiteSpace(SearchBox.Text) && Directory.Exists(_root))
         {
@@ -41,10 +42,15 @@ public partial class FindWindow : BaseDialog
     {
         if (ResultsList.SelectedItem is string file)
         {
+            Console.WriteLine($"File selected: {file}");
             FileSelected?.Invoke(file);
             Close();
         }
     }
 
-    private void OnClose(object? sender, RoutedEventArgs e) => SetCancelResult();
+    private void OnClose(object? sender, RoutedEventArgs e)
+    {
+        Console.WriteLine("Find window closed");
+        SetCancelResult();
+    }
 }

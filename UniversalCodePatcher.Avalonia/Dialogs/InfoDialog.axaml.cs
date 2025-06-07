@@ -1,6 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using System.Threading.Tasks;
+using System;
 
 namespace UniversalCodePatcher.Avalonia;
 
@@ -18,5 +19,9 @@ public partial class InfoDialog : BaseDialog
         await dlg.ShowDialog(parent);
     }
 
-    private void OnOk(object? sender, RoutedEventArgs e) => SetOKResult();
+    private void OnOk(object? sender, RoutedEventArgs e)
+    {
+        Console.WriteLine("Info dialog closed");
+        SetOKResult();
+    }
 }
