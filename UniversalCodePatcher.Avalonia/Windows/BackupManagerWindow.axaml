@@ -1,0 +1,6 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="UniversalCodePatcher.Avalonia.BackupManagerWindow"
+        Width="600" Height="400" Title="Backups">
+  <ListBox x:Name="List" />
+</Window>
