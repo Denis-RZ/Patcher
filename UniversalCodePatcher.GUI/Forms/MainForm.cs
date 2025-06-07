@@ -4,6 +4,7 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Windows.Forms;
+using System.Text.Json;
 using UniversalCodePatcher.Core;
 using UniversalCodePatcher.Interfaces;
 using UniversalCodePatcher.Modules.JavaScriptModule;
@@ -41,6 +42,13 @@ namespace UniversalCodePatcher.Forms
         private ToolStripStatusLabel infoLabel = null!;
         private string? projectPath;
 
+        // state helpers
+        private readonly Stack<string> undoStack = new();
+        private readonly Stack<string> redoStack = new();
+        private readonly List<string> recentProjects = new();
+        private bool showHiddenFiles;
+        private bool isDirty;
+
         private UniversalCodePatcher.Core.ServiceContainer services = null!;
         private UniversalCodePatcher.Core.ModuleManager moduleManager = null!;
         private Dictionary<string, UniversalCodePatcher.Interfaces.IPatcher> patchersByLang = new();
@@ -52,6 +60,7 @@ namespace UniversalCodePatcher.Forms
         {
             InitializeComponent();
             InitializeBusinessLogic();
+            LoadRecentProjects();
         }
 
         private void InitializeBusinessLogic()
@@ -257,7 +266,6 @@ namespace UniversalCodePatcher.Forms
             actionFlow.Controls.Add(cancelButton);
             bottomPanel.Controls.Add(actionFlow);
             verticalSplit.Panel2.Controls.Add(bottomPanel);
-            verticalSplit.Panel2.Controls.SetChildIndex(bottomPanel, 0);
 
             // Add root controls
             Controls.Add(verticalSplit);
@@ -276,14 +284,127 @@ namespace UniversalCodePatcher.Forms
             previewButton.Click += OnPreview;
             applyButton.Click += OnApplyPatches;
             projectTree.AfterSelect += OnTreeAfterSelect;
+            projectTree.AfterCheck += (_, __) => isDirty = true;
+            rulesGrid.CellValueChanged += (_, __) => isDirty = true;
 
             fileMenu = menuStrip.Items[0] as ToolStripMenuItem;
             if (fileMenu != null)
             {
                 foreach (ToolStripItem item in fileMenu.DropDownItems)
                 {
-                    if (item.Text == "Open Project")
-                        item.Click += OnOpenProject;
+                    switch (item.Text)
+                    {
+                        case "Open Project":
+                            item.Click += OnOpenProject;
+                            break;
+                        case "New Project":
+                            item.Click += OnNewProject;
+                            break;
+                        case "Save":
+                            item.Click += OnSaveProject;
+                            break;
+                        case "Recent":
+                            // items populated later
+                            break;
+                        case "Exit":
+                            item.Click += OnExit;
+                            break;
+                    }
+                }
+            }
+
+            var editMenuItem = menuStrip.Items[1] as ToolStripMenuItem;
+            if (editMenuItem != null)
+            {
+                foreach (ToolStripItem item in editMenuItem.DropDownItems)
+                {
+                    switch (item.Text)
+                    {
+                        case "Undo":
+                            item.Click += OnUndo;
+                            break;
+                        case "Redo":
+                            item.Click += OnRedo;
+                            break;
+                        case "Cut":
+                            item.Click += (s, e) => sourceBox.Cut();
+                            break;
+                        case "Copy":
+                            item.Click += (s, e) => sourceBox.Copy();
+                            break;
+                        case "Paste":
+                            item.Click += (s, e) => sourceBox.Paste();
+                            break;
+                        case "Find":
+                            item.Click += OnFindInFiles;
+                            break;
+                    }
+                }
+            }
+
+            var viewMenuItem = menuStrip.Items[2] as ToolStripMenuItem;
+            if (viewMenuItem != null)
+            {
+                foreach (ToolStripItem item in viewMenuItem.DropDownItems)
+                {
+                    switch (item.Text)
+                    {
+                        case "Refresh":
+                            item.Click += (s, e) => { if (projectPath != null) LoadProject(projectPath); };
+                            break;
+                        case "Show All Files":
+                            item.Click += OnToggleHidden;
+                            break;
+                        case "Expand Tree":
+                            item.Click += (s, e) => projectTree.ExpandAll();
+                            break;
+                    }
+                }
+                viewMenuItem.DropDownItems.Add("Collapse Tree", null, (s, e) => projectTree.CollapseAll());
+            }
+
+            var toolsMenuItem = menuStrip.Items[3] as ToolStripMenuItem;
+            if (toolsMenuItem != null)
+            {
+                foreach (ToolStripItem item in toolsMenuItem.DropDownItems)
+                {
+                    switch (item.Text)
+                    {
+                        case "Options":
+                            item.Click += (s, e) => new SettingsForm().ShowDialog(this);
+                            break;
+                        case "Backup Manager":
+                            item.Click += (s, e) =>
+                            {
+                                if (projectPath != null)
+                                    new BackupManagerForm(projectPath).ShowDialog(this);
+                            };
+                            break;
+                        case "Module Settings":
+                            item.Click += (s, e) => new ModuleManagerForm(moduleManager).ShowDialog(this);
+                            break;
+                    }
+                }
+            }
+
+            var helpMenuItem = menuStrip.Items[4] as ToolStripMenuItem;
+            if (helpMenuItem != null)
+            {
+                foreach (ToolStripItem item in helpMenuItem.DropDownItems)
+                {
+                    switch (item.Text)
+                    {
+                        case "Documentation":
+                            item.Click += (s, e) => System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                            {
+                                FileName = "https://github.com/",
+                                UseShellExecute = true
+                            });
+                            break;
+                        case "About":
+                            item.Click += (s, e) => new AboutForm().ShowDialog(this);
+                            break;
+                    }
                 }
             }
 
@@ -316,6 +437,7 @@ namespace UniversalCodePatcher.Forms
             {
                 projectPath = dlg.SelectedPath;
                 LoadProject(dlg.SelectedPath);
+                AddRecent(projectPath);
             }
         }
 
@@ -345,12 +467,16 @@ namespace UniversalCodePatcher.Forms
         {
             foreach (var sub in dir.GetDirectories())
             {
+                if (!showHiddenFiles && (sub.Attributes & FileAttributes.Hidden) != 0)
+                    continue;
                 var node = parent.Nodes.Add(sub.Name);
                 node.Tag = sub.FullName;
                 AddDirectoryNodes(sub, node);
             }
             foreach (var file in dir.GetFiles())
             {
+                if (!showHiddenFiles && (file.Attributes & FileAttributes.Hidden) != 0)
+                    continue;
                 var node = parent.Nodes.Add(file.Name);
                 node.Tag = file.FullName;
             }
@@ -489,6 +615,129 @@ namespace UniversalCodePatcher.Forms
             {
                 foreach (var n in EnumerateNodes(child))
                     yield return n;
+            }
+        }
+
+        private void OnNewProject(object? sender, EventArgs e)
+        {
+            using var dlg = new NewProjectForm();
+            if (dlg.ShowDialog(this) == DialogResult.OK)
+            {
+                if (!Directory.Exists(dlg.ProjectPath))
+                    Directory.CreateDirectory(dlg.ProjectPath);
+                projectPath = dlg.ProjectPath;
+                LoadProject(projectPath);
+                AddRecent(projectPath);
+            }
+        }
+
+        private void OnSaveProject(object? sender, EventArgs e)
+        {
+            if (projectPath == null) return;
+            using var dlg = new SaveFileDialog { Filter = "Project|*.json" };
+            if (dlg.ShowDialog(this) != DialogResult.OK) return;
+            var state = new ProjectState { ProjectPath = projectPath };
+            foreach (DataGridViewRow row in rulesGrid.Rows)
+            {
+                if (row.IsNewRow) continue;
+                state.Rules.Add(new SimplePatchRule
+                {
+                    Name = row.Cells[0].Value?.ToString(),
+                    Pattern = row.Cells[1].Value?.ToString() ?? string.Empty,
+                    Replace = row.Cells[2].Value?.ToString() ?? string.Empty
+                });
+            }
+            if (projectTree.Nodes.Count > 0)
+            {
+                foreach (var node in EnumerateNodes(projectTree.Nodes[0]))
+                    if (node.Checked && node.Tag is string file)
+                        state.SelectedFiles.Add(file);
+            }
+            File.WriteAllText(dlg.FileName, JsonSerializer.Serialize(state, new JsonSerializerOptions { WriteIndented = true }));
+            isDirty = false;
+        }
+
+        private void OnExit(object? sender, EventArgs e)
+        {
+            if (isDirty && MessageBox.Show("Exit without saving?", "Confirm", MessageBoxButtons.OKCancel) != DialogResult.OK)
+                return;
+            Close();
+        }
+
+        private void OnUndo(object? sender, EventArgs e)
+        {
+            if (undoStack.Count > 0)
+            {
+                redoStack.Push(sourceBox.Text);
+                var text = undoStack.Pop();
+                sourceBox.Text = text;
+            }
+        }
+
+        private void OnRedo(object? sender, EventArgs e)
+        {
+            if (redoStack.Count > 0)
+            {
+                undoStack.Push(sourceBox.Text);
+                sourceBox.Text = redoStack.Pop();
+            }
+        }
+
+        private void OnFindInFiles(object? sender, EventArgs e)
+        {
+            if (projectPath == null) return;
+            using var dlg = new FindForm(projectPath);
+            dlg.FileSelected += file =>
+            {
+                var nodes = projectTree.Nodes.Find(Path.GetFileName(file), true);
+                if (nodes.Length > 0)
+                    projectTree.SelectedNode = nodes[0];
+            };
+            dlg.ShowDialog(this);
+        }
+
+        private void OnToggleHidden(object? sender, EventArgs e)
+        {
+            showHiddenFiles = !showHiddenFiles;
+            if (projectPath != null) LoadProject(projectPath);
+        }
+
+        private void AddRecent(string path)
+        {
+            recentProjects.Remove(path);
+            recentProjects.Insert(0, path);
+            if (recentProjects.Count > 5) recentProjects.RemoveAt(5);
+            UpdateRecentMenu();
+            SaveRecentProjects();
+        }
+
+        private void LoadRecentProjects()
+        {
+            var file = Path.Combine(Application.StartupPath, "recent.txt");
+            if (File.Exists(file))
+                recentProjects.AddRange(File.ReadAllLines(file));
+            UpdateRecentMenu();
+        }
+
+        private void SaveRecentProjects()
+        {
+            var file = Path.Combine(Application.StartupPath, "recent.txt");
+            File.WriteAllLines(file, recentProjects.Take(5));
+        }
+
+        private void UpdateRecentMenu()
+        {
+            if (menuStrip.Items.Count == 0) return;
+            var fileMenuItem = menuStrip.Items[0] as ToolStripMenuItem;
+            if (fileMenuItem == null) return;
+            var recent = fileMenuItem.DropDownItems.Cast<ToolStripItem>().FirstOrDefault(i => i.Text == "Recent") as ToolStripMenuItem;
+            if (recent == null) return;
+            recent.DropDownItems.Clear();
+            foreach (var p in recentProjects.Take(5))
+            {
+                var item = new ToolStripMenuItem(p);
+                item.Click += (s, e) => { projectPath = p; LoadProject(p); };
+                recent.DropDownItems.Add(item);
             }
         }
 
