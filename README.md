@@ -9,6 +9,7 @@ Intelligent multi-language code patcher with modular architecture.
 - **Multiple Languages**: JavaScript, TypeScript, C# support
 - **Diff Engine**: Create and apply unified diffs without Git dependency
 - **Visual Interface**: Professional WinForms GUI
+- **Cross Platform UI**: Reference Avalonia version for Linux
 - **Backup System**: Automatic backups before patching
 
 ## Modules
@@ -31,6 +32,10 @@ Intelligent multi-language code patcher with modular architecture.
 1. Open UniversalCodePatcher.sln in Visual Studio
 2. Build solution (Ctrl+Shift+B)
 3. Run (F5)
+4. Alternatively run the Avalonia UI with:
+   ```bash
+   dotnet run --project UniversalCodePatcher.Avalonia
+   ```
 
 ## Usage
 
