@@ -5,7 +5,10 @@
         Width="600" Height="400" Title="Backups">
   <Grid RowDefinitions="*,Auto" Margin="10">
     <ListBox x:Name="List" />
-    <Button Grid.Row="1" Content="Close" HorizontalAlignment="Right"
-            Width="80" Click="OnClose" IsCancel="True"/>
+    <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+      <Button Content="Restore" Width="80" Click="OnRestore"/>
+      <Button Content="Delete" Width="80" Click="OnDelete"/>
+      <Button Content="Close" Width="80" Click="OnClose" IsCancel="True"/>
+    </StackPanel>
   </Grid>
 </local:BaseDialog>
