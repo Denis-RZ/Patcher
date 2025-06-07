@@ -37,11 +37,24 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
 
-        // set window icon from embedded base64 PNG to avoid binary resources
-        const string iconBase64 = "iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAAIGNIUk0AAHomAACAhAAA+gAAAIDoAAB1MAAA6mAAADqYAAAXcJy6UTwAAAGMUExURQAAANz4+P///yP59wAAANj09O7f39vPz01YWPr///H29uvOz+ytruuQku1wcu97feHCwtTOz9yGidhkaNpXW9xKTt8+QuIxNetJTN3BwQAAANfHyM9PU+hUVt3NzdfExc1ITYhUVd/X2N3S0syPkctGSePDw9rT092Pke9KTd7Dw9XDxM5ITNRaXd/Y2dbExclNUYRLTOPQ0N7X2NWtr+RJTOHDw9fMzddrbuxLTt7FxeY/Q+ZvccbIyNTCw9JkaM9GS9RTV9dfYtltb9h+gNCYma66uqqhocmnqL+lpq+6uX/Z1wj//+YkKMogJs8gJNUeI9weI+MfI+ceIsYcIsggJcQiJrciJZ8gI3MXGaJiZH1GR2IvMGAnKGwgIpAaHNBaXsU7PsMkKNIhJeAgJOofIsobINEeI9gfJN4gJOEgJNgeIboiJrIlKaQlKY8kJ3IgIlQWF659foZRUnEuMH0lJ5ggI78cH9A4PNEqL9QhJdwgJOMfJOgdIckbIc8fJNUhJtsmKuEuM///0ks9G4AAABNdFJOUwAAAAABAyUKAQQNHDNYk70bC3WrxNzv/NsbAhrZ2xsa2dsbGtnbGxrZ2xsa2dsbGtnbGxrZ2xsa2dsb8Z4NGczkzbOSajoNCDAkEwgBd0VMIQAAAAFiS0dEAmYLfGQAAAAHdElNRQfpBgcLLjm3X0M2AAAAs0lEQVQY02NgQQMMMJqBkZWNHSbAwcnFzcPLxy/ABBZgEhQSFhEVE/eVkGSSkgIJSMv4+QcEBgXLykEF5BVCQsPCIyIVlaACyipR0TGxcfGqalABdY2ExKTklFRNLaih2jpp6RmZWdm6elABfYOc3Lz8gkJDI6iAsUlRcUlpWbmpGVTA3KKisqq6ptbSCm5GXX1DY5O1jS1UwM7ewdHJ2cXVDeY5dw9PL28fZgYk3zIgvA8Agksj64grGTgAAAAASUVORK5CYII=";
-        var iconBytes = Convert.FromBase64String(iconBase64);
-        using var iconStream = new MemoryStream(iconBytes);
-        Icon = new WindowIcon(iconStream);
+ 
+        // set window icon from embedded Base64 PNG to avoid binary resources
+        const string iconBase64 = "iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAHUlEQVR4nGP8z8Dwn4ECwESJ5lEDRg0YNWAwGQAAWG0CHvXMz6IAAAAASUVORK5CYII=";
+        if (IsValidBase64(iconBase64))
+        {
+            try
+            {
+                var iconBytes = Convert.FromBase64String(iconBase64);
+                using var iconStream = new MemoryStream(iconBytes);
+                Icon = new WindowIcon(iconStream);
+            }
+            catch (FormatException ex)
+            {
+                Debug.WriteLine($"Invalid window icon data: {ex.Message}");
+            }
+        }
+ 
+ 
 
         _moduleManager = new ModuleManager(_services);
         _moduleManager.ModuleError += (_, e) =>
@@ -375,5 +388,13 @@ public partial class MainWindow : Window
             node.Items.Add(BuildSubTree(sub));
         }
         return node;
+    }
+
+    private static bool IsValidBase64(string input)
+    {
+        if (string.IsNullOrWhiteSpace(input))
+            return false;
+        Span<byte> buffer = new Span<byte>(new byte[input.Length]);
+        return Convert.TryFromBase64String(input, buffer, out _);
     }
 }
