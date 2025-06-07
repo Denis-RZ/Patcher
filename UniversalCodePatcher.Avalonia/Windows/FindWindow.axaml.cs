@@ -45,4 +45,6 @@ public partial class FindWindow : BaseDialog
             Close();
         }
     }
+
+    private void OnClose(object? sender, RoutedEventArgs e) => SetCancelResult();
 }

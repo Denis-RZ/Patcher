@@ -50,3 +50,11 @@ Intelligent multi-language code patcher with modular architecture.
 - .NET 6.0 or higher
 - Windows OS
 - Visual Studio 2022 (for development)
+
+## Avalonia Windows
+
+All Avalonia dialogs now include proper OK or Cancel buttons. The following windows were audited and fixed:
+- BackupManagerWindow
+- ModuleManagerWindow
+- SettingsWindow
+- FindWindow
