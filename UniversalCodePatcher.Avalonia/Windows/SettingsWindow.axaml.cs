@@ -2,7 +2,7 @@ using Avalonia.Controls;
 
 namespace UniversalCodePatcher.Avalonia;
 
-public partial class SettingsWindow : Window
+public partial class SettingsWindow : BaseDialog
 {
     public SettingsWindow()
     {

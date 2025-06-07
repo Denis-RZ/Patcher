@@ -4,7 +4,7 @@ using System.Reflection;
 
 namespace UniversalCodePatcher.Avalonia;
 
-public partial class AboutWindow : Window
+public partial class AboutWindow : BaseDialog
 {
     public AboutWindow()
     {
@@ -13,5 +13,5 @@ public partial class AboutWindow : Window
         Label.Text = $"Universal Code Patcher\nVersion {version}";
     }
 
-    private void OnOk(object? sender, RoutedEventArgs e) => Close();
+    private void OnOk(object? sender, RoutedEventArgs e) => SetOKResult();
 }

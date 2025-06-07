@@ -7,7 +7,7 @@ using System.Collections.Generic;
 
 namespace UniversalCodePatcher.Avalonia;
 
-public partial class FindWindow : Window
+public partial class FindWindow : BaseDialog
 {
     private readonly string _root;
     public event Action<string>? FileSelected;

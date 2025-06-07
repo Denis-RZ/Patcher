@@ -1,5 +1,6 @@
-<Window xmlns="https://github.com/avaloniaui"
+<local:BaseDialog xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:UniversalCodePatcher.Avalonia"
         x:Class="UniversalCodePatcher.Avalonia.FindWindow"
         Width="600" Height="400" Title="Find in Files">
   <DockPanel>
@@ -9,4 +10,4 @@
     </StackPanel>
     <ListBox x:Name="ResultsList" DoubleTapped="OnDouble"/>
   </DockPanel>
-</Window>
+</local:BaseDialog>

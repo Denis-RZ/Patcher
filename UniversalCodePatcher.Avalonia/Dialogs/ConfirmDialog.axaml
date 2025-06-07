@@ -1,0 +1,14 @@
+<local:BaseDialog xmlns="https://github.com/avaloniaui"
+                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:local="clr-namespace:UniversalCodePatcher.Avalonia"
+                 x:Class="UniversalCodePatcher.Avalonia.ConfirmDialog"
+                 Width="350" Height="120" Title="Confirm">
+    <Grid RowDefinitions="*,Auto" ColumnDefinitions="Auto,*" Margin="16">
+        <TextBlock Text="?" FontSize="32" Foreground="Blue" />
+        <TextBlock x:Name="MessageText" Grid.Column="1" Margin="8,0,0,0" TextWrapping="Wrap"/>
+        <StackPanel Grid.Row="1" Grid.ColumnSpan="2" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,16,0,0">
+            <Button Content="OK" Width="75" Click="OnOk" IsDefault="True"/>
+            <Button Content="Cancel" Width="75" Click="OnCancel" IsCancel="True"/>
+        </StackPanel>
+    </Grid>
+</local:BaseDialog>

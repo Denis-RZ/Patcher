@@ -40,16 +40,7 @@ public partial class MainWindow : Window
         _moduleManager = new ModuleManager(_services);
         _moduleManager.ModuleError += (_, e) =>
         {
-            var dlg = new Window
-            {
-                Title = "Module Error",
-                Content = new TextBlock { Text = e.Error, Margin = new Thickness(20) },
-                Width = 300,
-                Height = 150
-            };
- 
-            Dispatcher.UIThread.Post(() => dlg.ShowDialog(this));
- 
+            Dispatcher.UIThread.Post(async () => await ErrorDialog.ShowAsync(this, e.Error));
         };
 
         _moduleManager.LoadModule(typeof(JavaScriptModule));
@@ -79,7 +70,8 @@ public partial class MainWindow : Window
     private async void OnNewProject(object? sender, RoutedEventArgs e)
     {
         var dlg = new NewProjectWindow();
-        var result = await dlg.ShowDialog<bool?>(this);
+        await dlg.ShowDialog(this);
+        var result = dlg.DialogResult;
         if (result == true && !string.IsNullOrWhiteSpace(dlg.ProjectPath))
         {
             if (!Directory.Exists(dlg.ProjectPath))

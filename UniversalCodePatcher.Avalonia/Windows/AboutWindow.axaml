@@ -1,9 +1,10 @@
-<Window xmlns="https://github.com/avaloniaui"
+<local:BaseDialog xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:UniversalCodePatcher.Avalonia"
         x:Class="UniversalCodePatcher.Avalonia.AboutWindow"
         Width="300" Height="150" Title="About">
   <StackPanel Margin="20">
     <TextBlock x:Name="Label" HorizontalAlignment="Center"/>
     <Button Content="OK" HorizontalAlignment="Center" Width="80" Margin="0,20,0,0" IsDefault="True" Click="OnOk"/>
   </StackPanel>
-</Window>
+</local:BaseDialog>
