@@ -37,6 +37,22 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
 
+        // set window icon from embedded Base64 PNG to avoid binary resources
+        const string iconBase64 = "iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAHUlEQVR4nGP8z8Dwn4ECwESJ5lEDRg0YNWAwGQAAWG0CHvXMz6IAAAAASUVORK5CYII=";
+        if (IsValidBase64(iconBase64))
+        {
+            try
+            {
+                var iconBytes = Convert.FromBase64String(iconBase64);
+                using var iconStream = new MemoryStream(iconBytes);
+                Icon = new WindowIcon(iconStream);
+            }
+            catch (FormatException ex)
+            {
+                Debug.WriteLine($"Invalid window icon data: {ex.Message}");
+            }
+        }
+
         _moduleManager = new ModuleManager(_services);
         _moduleManager.ModuleError += (_, e) =>
         {
@@ -369,5 +385,13 @@ public partial class MainWindow : Window
             node.Items.Add(BuildSubTree(sub));
         }
         return node;
+    }
+
+    private static bool IsValidBase64(string input)
+    {
+        if (string.IsNullOrWhiteSpace(input))
+            return false;
+        Span<byte> buffer = new Span<byte>(new byte[input.Length]);
+        return Convert.TryFromBase64String(input, buffer, out _);
     }
 }
