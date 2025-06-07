@@ -4,7 +4,7 @@ using UniversalCodePatcher.Core;
 
 namespace UniversalCodePatcher.Avalonia;
 
-public partial class ModuleManagerWindow : Window
+public partial class ModuleManagerWindow : BaseDialog
 {
     public ModuleManagerWindow(ModuleManager manager)
     {

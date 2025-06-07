@@ -5,7 +5,7 @@ using Avalonia.Platform.Storage;
 
 namespace UniversalCodePatcher.Avalonia;
 
-public partial class NewProjectWindow : Window
+public partial class NewProjectWindow : BaseDialog
 {
     public string ProjectName => NameBox.Text;
     public string ProjectPath => PathBox.Text;
@@ -24,5 +24,5 @@ public partial class NewProjectWindow : Window
             PathBox.Text = folder[0].Path.LocalPath;
     }
 
-    private void OnOk(object? sender, RoutedEventArgs e) => Close(true);
+    private void OnOk(object? sender, RoutedEventArgs e) => SetOKResult();
 }

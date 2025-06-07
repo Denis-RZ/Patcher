@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace UniversalCodePatcher.Avalonia;
 
-public partial class BackupManagerWindow : Window
+public partial class BackupManagerWindow : BaseDialog
 {
     public BackupManagerWindow(string directory)
     {

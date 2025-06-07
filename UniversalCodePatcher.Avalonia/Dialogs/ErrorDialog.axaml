@@ -1,0 +1,12 @@
+<local:BaseDialog xmlns="https://github.com/avaloniaui"
+                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:local="clr-namespace:UniversalCodePatcher.Avalonia"
+                 x:Class="UniversalCodePatcher.Avalonia.ErrorDialog"
+                 Width="400" Height="150" Title="Error">
+    <Grid RowDefinitions="*,Auto" ColumnDefinitions="Auto,*" Margin="16">
+        <TextBlock Text="❌" FontSize="32" Foreground="Red" />
+        <TextBlock x:Name="MessageText" Grid.Column="1" Margin="8,0,0,0" TextWrapping="Wrap"/>
+        <Button Grid.Row="1" Grid.ColumnSpan="2" Content="OK" Width="75" Height="23"
+                HorizontalAlignment="Right" Margin="0,16,0,0" Click="OnOk" IsDefault="True"/>
+    </Grid>
+</local:BaseDialog>
