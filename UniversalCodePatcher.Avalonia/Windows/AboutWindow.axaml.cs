@@ -1,6 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using System.Reflection;
+using System;
 
 namespace UniversalCodePatcher.Avalonia;
 
@@ -13,5 +14,9 @@ public partial class AboutWindow : BaseDialog
         Label.Text = $"Universal Code Patcher\nVersion {version}";
     }
 
-    private void OnOk(object? sender, RoutedEventArgs e) => SetOKResult();
+    private void OnOk(object? sender, RoutedEventArgs e)
+    {
+        Console.WriteLine("About window closed");
+        SetOKResult();
+    }
 }

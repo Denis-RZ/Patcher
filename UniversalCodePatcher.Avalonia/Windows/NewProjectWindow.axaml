@@ -13,7 +13,7 @@
     </StackPanel>
     <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
       <Button Content="OK" Width="70" Margin="5" IsDefault="True" Click="OnOk"/>
-      <Button Content="Cancel" Width="70" Margin="5" IsCancel="True"/>
+      <Button Content="Cancel" Width="70" Margin="5" IsCancel="True" Click="OnCancel"/>
     </StackPanel>
   </Grid>
 </local:BaseDialog>
