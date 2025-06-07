@@ -25,8 +25,14 @@ public partial class NewProjectWindow : BaseDialog
             PathBox.Text = folder[0].Path.LocalPath;
     }
 
-    private void OnOk(object? sender, RoutedEventArgs e)
+    private async void OnOk(object? sender, RoutedEventArgs e)
     {
+        if (string.IsNullOrWhiteSpace(ProjectName) || string.IsNullOrWhiteSpace(ProjectPath))
+        {
+            await ErrorDialog.ShowAsync(this, "Name and location are required");
+            return;
+        }
+
         Console.WriteLine($"New project created: {ProjectName} at {ProjectPath}");
         SetOKResult();
     }
