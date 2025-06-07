@@ -37,6 +37,7 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
 
+ 
         // set window icon from embedded Base64 PNG to avoid binary resources
         const string iconBase64 = "iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAHUlEQVR4nGP8z8Dwn4ECwESJ5lEDRg0YNWAwGQAAWG0CHvXMz6IAAAAASUVORK5CYII=";
         if (IsValidBase64(iconBase64))
@@ -52,6 +53,8 @@ public partial class MainWindow : Window
                 Debug.WriteLine($"Invalid window icon data: {ex.Message}");
             }
         }
+ 
+ 
 
         _moduleManager = new ModuleManager(_services);
         _moduleManager.ModuleError += (_, e) =>
