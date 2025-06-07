@@ -47,8 +47,9 @@ public partial class MainWindow : Window
                 Width = 300,
                 Height = 150
             };
-            // use dispatcher so dialog is shown after the main window is visible
+ 
             Dispatcher.UIThread.Post(() => dlg.ShowDialog(this));
+ 
         };
 
         _moduleManager.LoadModule(typeof(JavaScriptModule));
