@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using Avalonia.Interactivity;
 using System.IO;
 using System.Linq;
 
@@ -17,4 +18,6 @@ public partial class BackupManagerWindow : BaseDialog
             }
         }
     }
+
+    private void OnClose(object? sender, RoutedEventArgs e) => SetCancelResult();
 }

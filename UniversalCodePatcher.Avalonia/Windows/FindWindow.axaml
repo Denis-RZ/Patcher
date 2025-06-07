@@ -8,6 +8,8 @@
       <TextBox Width="400" x:Name="SearchBox"/>
       <Button Content="Search" Click="OnSearch" Margin="4,0,0,0"/>
     </StackPanel>
+    <Button Content="Close" DockPanel.Dock="Bottom" HorizontalAlignment="Right"
+            Margin="4" Width="80" Click="OnClose" IsCancel="True"/>
     <ListBox x:Name="ResultsList" DoubleTapped="OnDouble"/>
   </DockPanel>
 </local:BaseDialog>

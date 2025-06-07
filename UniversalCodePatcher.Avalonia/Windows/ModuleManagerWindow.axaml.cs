@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using Avalonia.Interactivity;
 using System.Linq;
 using UniversalCodePatcher.Core;
 
@@ -12,4 +13,6 @@ public partial class ModuleManagerWindow : BaseDialog
         foreach (var m in manager.LoadedModules)
             ModuleList.Items.Add(m.Name);
     }
+
+    private void OnClose(object? sender, RoutedEventArgs e) => SetCancelResult();
 }

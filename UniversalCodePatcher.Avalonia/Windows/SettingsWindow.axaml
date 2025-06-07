@@ -3,9 +3,15 @@
         xmlns:local="clr-namespace:UniversalCodePatcher.Avalonia"
         x:Class="UniversalCodePatcher.Avalonia.SettingsWindow"
         Width="400" Height="300" Title="Settings">
-  <TabControl>
-    <TabItem Header="General"/>
-    <TabItem Header="Modules"/>
-    <TabItem Header="Appearance"/>
-  </TabControl>
+  <Grid RowDefinitions="*,Auto" Margin="10">
+    <TabControl>
+      <TabItem Header="General"/>
+      <TabItem Header="Modules"/>
+      <TabItem Header="Appearance"/>
+    </TabControl>
+    <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+      <Button Content="OK" Width="80" Click="OnOk" IsDefault="True"/>
+      <Button Content="Cancel" Width="80" Click="OnCancel" IsCancel="True"/>
+    </StackPanel>
+  </Grid>
 </local:BaseDialog>
