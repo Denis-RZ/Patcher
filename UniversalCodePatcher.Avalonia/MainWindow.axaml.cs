@@ -70,8 +70,7 @@ public partial class MainWindow : Window
     private async void OnNewProject(object? sender, RoutedEventArgs e)
     {
         var dlg = new NewProjectWindow();
-        await dlg.ShowDialog(this);
-        var result = dlg.DialogResult;
+        var result = await dlg.ShowDialog<bool?>(this);
         if (result == true && !string.IsNullOrWhiteSpace(dlg.ProjectPath))
         {
             if (!Directory.Exists(dlg.ProjectPath))
