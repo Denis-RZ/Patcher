@@ -23,4 +23,6 @@
   <ItemGroup>
     <ProjectReference Include="..\UniversalCodePatcher\UniversalCodePatcher.csproj" />
   </ItemGroup>
+
+  <!-- Avalonia XAML files are included automatically -->
 </Project>

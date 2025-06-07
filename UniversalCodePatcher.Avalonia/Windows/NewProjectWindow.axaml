@@ -1,0 +1,18 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="UniversalCodePatcher.Avalonia.NewProjectWindow"
+        Width="400" Height="150" Title="New Project">
+  <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="Auto,*">
+    <TextBlock Grid.Row="0" Grid.Column="0" Text="Name" Margin="5" VerticalAlignment="Center"/>
+    <TextBox Grid.Row="0" Grid.Column="1" x:Name="NameBox" Margin="5"/>
+    <TextBlock Grid.Row="1" Grid.Column="0" Text="Location" Margin="5" VerticalAlignment="Center"/>
+    <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal">
+      <TextBox x:Name="PathBox" Width="300" Margin="0,0,5,0"/>
+      <Button Content="Browse" Click="OnBrowse"/>
+    </StackPanel>
+    <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
+      <Button Content="OK" Width="70" Margin="5" IsDefault="True" Click="OnOk"/>
+      <Button Content="Cancel" Width="70" Margin="5" IsCancel="True"/>
+    </StackPanel>
+  </Grid>
+</Window>
