@@ -5,9 +5,11 @@
         xmlns:dg="clr-namespace:Avalonia.Controls;assembly=Avalonia.Controls.DataGrid"
         x:Class="UniversalCodePatcher.Avalonia.MainWindow"
         mc:Ignorable="d"
-        Title="Universal Code Patcher" Width="1024" Height="768">
-  <DockPanel>
-    <Menu DockPanel.Dock="Top">
+        Title="Universal Code Patcher"
+        Width="1024" Height="768">
+  <Border Padding="8">
+    <Grid RowDefinitions="Auto,Auto,*,Auto" ColumnDefinitions="*">
+    <Menu Grid.Row="0">
       <MenuItem Header="_File">
         <MenuItem Header="_New Project" Click="OnNewProject"/>
         <MenuItem Header="_Open Project" Click="OnOpenProject"/>
@@ -40,10 +42,15 @@
         <MenuItem Header="_About" Click="OnAbout"/>
       </MenuItem>
     </Menu>
-    <Border DockPanel.Dock="Bottom" Background="#EEE" Padding="4">
+    <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="4" Margin="0,4">
+      <Button Content="Open" Click="OnOpenProject"/>
+      <Button Content="Save" Click="OnSaveProject"/>
+      <Button Content="Apply" Click="OnApply"/>
+    </StackPanel>
+    <Border Grid.Row="3" Background="#EEE" Padding="4" Margin="0,4,0,0">
       <TextBlock Name="StatusText" Text="Ready"/>
     </Border>
-    <Grid>
+    <Grid Grid.Row="2">
       <Grid.ColumnDefinitions>
         <ColumnDefinition Width="250"/>
         <ColumnDefinition Width="5"/>
@@ -51,8 +58,8 @@
       </Grid.ColumnDefinitions>
       <TreeView Grid.Column="0" Name="ProjectTree" SelectionChanged="OnTreeSelect"/>
       <GridSplitter Grid.Column="1" Width="5"/>
-      <Grid Grid.Column="2" RowDefinitions="*,Auto">
-        <TabControl Name="MainTabs" Grid.Row="0">
+      <Grid Grid.Column="2" RowDefinitions="*,Auto" Margin="8,0,0,0">
+        <TabControl Name="MainTabs" Grid.Row="0" Margin="0,0,0,8">
           <TabItem Header="Source">
             <TextBox Name="SourceBox" AcceptsReturn="True" FontFamily="Consolas"/>
           </TabItem>
@@ -64,19 +71,20 @@
           </TabItem>
         </TabControl>
         <StackPanel Grid.Row="1" Orientation="Vertical">
-          <Border BorderBrush="Gray" BorderThickness="1" Padding="4" Margin="0,0,0,4" Height="150">
+          <Border BorderBrush="Gray" BorderThickness="1" Margin="0,0,0,8" Padding="4" Height="150">
             <StackPanel>
               <TextBlock Text="Patch Results" FontWeight="Bold"/>
-              <ListBox Name="ResultsList"/>
+              <ListBox Name="ResultsList" Margin="0,4,0,0"/>
             </StackPanel>
           </Border>
-          <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-            <Button Name="ApplyButton" Content="Apply Patches" Margin="5" Click="OnApply"/>
-            <Button Name="PreviewButton" Content="Preview" Margin="5" Click="OnPreview"/>
-            <Button Name="CancelButton" Content="Cancel" Margin="5" Click="OnCancel"/>
+          <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+            <Button Name="ApplyButton" Content="Apply Patches" Width="100" Click="OnApply"/>
+            <Button Name="PreviewButton" Content="Preview" Width="100" Click="OnPreview"/>
+            <Button Name="CancelButton" Content="Cancel" Width="100" Click="OnCancel"/>
           </StackPanel>
         </StackPanel>
       </Grid>
+      </Grid>
     </Grid>
-  </DockPanel>
+  </Border>
 </Window>
