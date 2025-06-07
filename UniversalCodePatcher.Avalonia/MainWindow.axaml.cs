@@ -3,6 +3,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
 using Avalonia;
+using Avalonia.Threading;
 using System.Collections.Generic;
 using System.IO;
 using System.Diagnostics;
@@ -46,7 +47,9 @@ public partial class MainWindow : Window
                 Width = 300,
                 Height = 150
             };
-            dlg.ShowDialog(this);
+ 
+            Dispatcher.UIThread.Post(() => dlg.ShowDialog(this));
+ 
         };
 
         _moduleManager.LoadModule(typeof(JavaScriptModule));
