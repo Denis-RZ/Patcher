@@ -12,13 +12,16 @@
         <MenuItem Header="_New Project" Click="OnNewProject"/>
         <MenuItem Header="_Open Project" Click="OnOpenProject"/>
         <MenuItem Header="_Save" Click="OnSaveProject"/>
+ 
         <MenuItem x:Name="RecentMenu" Header="Recent Projects"/>
+ 
         <Separator/>
         <MenuItem Header="E_xit" Click="OnExit"/>
       </MenuItem>
       <MenuItem Header="_Edit">
         <MenuItem Header="_Undo" Click="OnUndo"/>
         <MenuItem Header="_Redo" Click="OnRedo"/>
+ 
         <MenuItem Header="Select _All Files" Click="OnSelectAllFiles"/>
         <MenuItem Header="_Find in Files" Click="OnFindInFiles"/>
       </MenuItem>

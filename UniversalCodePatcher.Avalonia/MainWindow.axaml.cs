@@ -4,6 +4,7 @@ using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
 using Avalonia;
 using System.Collections.Generic;
+ 
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -11,12 +12,15 @@ using System.Text.Json;
 using System;
 using Avalonia.VisualTree;
 using Avalonia.Layout;
+using System.IO;
+ 
 
 namespace UniversalCodePatcher.Avalonia;
 
 public partial class MainWindow : Window
 {
     private string? _projectPath;
+ 
     private bool _showHiddenFiles;
     private bool _isDirty;
     private readonly List<string> _recentProjects = new();
@@ -25,16 +29,18 @@ public partial class MainWindow : Window
     private string RecentFile => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
         "UniversalCodePatcher", "recent.txt");
-
+ 
     public MainWindow()
     {
         InitializeComponent();
+ 
         LoadRecentProjects();
         SourceBox.PropertyChanged += (_, e) =>
         {
             if (e.Property == TextBox.TextProperty)
                 _isDirty = true;
         };
+ 
     }
 
     private async void OnNewProject(object? sender, RoutedEventArgs e)
@@ -50,6 +56,7 @@ public partial class MainWindow : Window
             LoadProject(path);
             AddRecentProject(path);
             _isDirty = false;
+ 
         }
     }
 
@@ -58,6 +65,7 @@ public partial class MainWindow : Window
         OnNewProject(sender, e);
     }
 
+ 
     private void AddRecentProject(string path)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(RecentFile)!);
@@ -159,6 +167,20 @@ public partial class MainWindow : Window
     {
         SourceBox.Redo();
     }
+=======
+    private void OnSaveProject(object? sender, RoutedEventArgs e)
+    {
+        // Placeholder for saving project state
+    }
+
+    private void OnExit(object? sender, RoutedEventArgs e)
+    {
+        (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.Shutdown();
+    }
+
+    private void OnUndo(object? sender, RoutedEventArgs e) { }
+    private void OnRedo(object? sender, RoutedEventArgs e) { }
+ 
 
     private async void OnAbout(object? sender, RoutedEventArgs e)
     {
@@ -185,14 +207,18 @@ public partial class MainWindow : Window
         var root = new TreeViewItem { Header = Path.GetFileName(path), Tag = path };
         foreach (var file in Directory.GetFiles(path))
         {
+ 
             if (!_showHiddenFiles && Path.GetFileName(file).StartsWith('.'))
                 continue;
+ 
             root.Items.Add(new TreeViewItem { Header = Path.GetFileName(file), Tag = file });
         }
         foreach (var dir in Directory.GetDirectories(path))
         {
+ 
             if (!_showHiddenFiles && Path.GetFileName(dir).StartsWith('.'))
                 continue;
+ 
             root.Items.Add(BuildSubTree(dir));
         }
         return new[] { root };
@@ -203,19 +229,23 @@ public partial class MainWindow : Window
         var node = new TreeViewItem { Header = Path.GetFileName(dir), Tag = dir };
         foreach (var file in Directory.GetFiles(dir))
         {
+ 
             if (!_showHiddenFiles && Path.GetFileName(file).StartsWith('.'))
                 continue;
+ 
             node.Items.Add(new TreeViewItem { Header = Path.GetFileName(file), Tag = file });
         }
         foreach (var sub in Directory.GetDirectories(dir))
         {
+ 
             if (!_showHiddenFiles && Path.GetFileName(sub).StartsWith('.'))
                 continue;
+ 
             node.Items.Add(BuildSubTree(sub));
         }
         return node;
     }
-
+ 
     private void OnRefresh(object? sender, RoutedEventArgs e)
     {
         if (_projectPath != null)
@@ -329,4 +359,5 @@ public partial class MainWindow : Window
         }
         catch { }
     }
+ 
 }
