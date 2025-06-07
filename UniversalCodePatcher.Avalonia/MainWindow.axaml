@@ -49,7 +49,7 @@
         <ColumnDefinition Width="5"/>
         <ColumnDefinition Width="*"/>
       </Grid.ColumnDefinitions>
-      <TreeView Grid.Column="0" Name="ProjectTree"/>
+      <TreeView Grid.Column="0" Name="ProjectTree" SelectionChanged="OnTreeSelect"/>
       <GridSplitter Grid.Column="1" Width="5"/>
       <Grid Grid.Column="2" RowDefinitions="*,Auto">
         <TabControl Name="MainTabs" Grid.Row="0">
@@ -71,9 +71,9 @@
             </StackPanel>
           </Border>
           <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-            <Button Name="ApplyButton" Content="Apply Patches" Margin="5"/>
-            <Button Name="PreviewButton" Content="Preview" Margin="5"/>
-            <Button Name="CancelButton" Content="Cancel" Margin="5"/>
+            <Button Name="ApplyButton" Content="Apply Patches" Margin="5" Click="OnApply"/>
+            <Button Name="PreviewButton" Content="Preview" Margin="5" Click="OnPreview"/>
+            <Button Name="CancelButton" Content="Cancel" Margin="5" Click="OnCancel"/>
           </StackPanel>
         </StackPanel>
       </Grid>

@@ -1,0 +1,12 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="UniversalCodePatcher.Avalonia.FindWindow"
+        Width="600" Height="400" Title="Find in Files">
+  <DockPanel>
+    <StackPanel Orientation="Horizontal" DockPanel.Dock="Top" Margin="4">
+      <TextBox Width="400" x:Name="SearchBox"/>
+      <Button Content="Search" Click="OnSearch" Margin="4,0,0,0"/>
+    </StackPanel>
+    <ListBox x:Name="ResultsList" DoubleTapped="OnDouble"/>
+  </DockPanel>
+</Window>
