@@ -5,9 +5,21 @@
         Width="400" Height="300" Title="Settings">
   <Grid RowDefinitions="*,Auto" Margin="10">
     <TabControl>
-      <TabItem Header="General"/>
+      <TabItem Header="General">
+        <StackPanel Margin="10" Spacing="8">
+          <CheckBox Content="Show hidden files" IsChecked="{Binding ShowHiddenFiles}"/>
+        </StackPanel>
+      </TabItem>
       <TabItem Header="Modules"/>
-      <TabItem Header="Appearance"/>
+      <TabItem Header="Appearance">
+        <StackPanel Margin="10" Spacing="8">
+          <ComboBox SelectedItem="{Binding ThemeVariant}" Width="150">
+            <ComboBoxItem Content="Default"/>
+            <ComboBoxItem Content="Light"/>
+            <ComboBoxItem Content="Dark"/>
+          </ComboBox>
+        </StackPanel>
+      </TabItem>
     </TabControl>
     <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
       <Button Content="OK" Width="80" Click="OnOk" IsDefault="True"/>

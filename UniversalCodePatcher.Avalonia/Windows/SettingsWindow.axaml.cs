@@ -1,14 +1,19 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using System;
+using UniversalCodePatcher.Avalonia.Models;
 
 namespace UniversalCodePatcher.Avalonia;
 
 public partial class SettingsWindow : BaseDialog
 {
-    public SettingsWindow()
+    private readonly AppSettings _settings;
+
+    public SettingsWindow(AppSettings settings)
     {
+        _settings = settings;
         InitializeComponent();
+        DataContext = _settings;
     }
 
     private void OnOk(object? sender, RoutedEventArgs e)
