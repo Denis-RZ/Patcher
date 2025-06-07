@@ -12,14 +12,31 @@
         <MenuItem Header="_New Project" Click="OnNewProject"/>
         <MenuItem Header="_Open Project" Click="OnOpenProject"/>
         <MenuItem Header="_Save" Click="OnSaveProject"/>
+        <MenuItem Header="_Recent" Name="RecentMenu"/>
         <Separator/>
         <MenuItem Header="E_xit" Click="OnExit"/>
       </MenuItem>
       <MenuItem Header="_Edit">
         <MenuItem Header="_Undo" Click="OnUndo"/>
         <MenuItem Header="_Redo" Click="OnRedo"/>
+        <MenuItem Header="_Cut" Click="OnCut"/>
+        <MenuItem Header="_Copy" Click="OnCopy"/>
+        <MenuItem Header="_Paste" Click="OnPaste"/>
+        <MenuItem Header="_Find" Click="OnFind"/>
+      </MenuItem>
+      <MenuItem Header="_View">
+        <MenuItem Header="_Refresh" Click="OnRefresh"/>
+        <MenuItem Header="Show _All Files" Click="OnToggleHidden"/>
+        <MenuItem Header="_Expand Tree" Click="OnExpandTree"/>
+        <MenuItem Header="_Collapse Tree" Click="OnCollapseTree"/>
+      </MenuItem>
+      <MenuItem Header="_Tools">
+        <MenuItem Header="_Options" Click="OnOptions"/>
+        <MenuItem Header="_Backup Manager" Click="OnBackupManager"/>
+        <MenuItem Header="_Module Settings" Click="OnModuleSettings"/>
       </MenuItem>
       <MenuItem Header="_Help">
+        <MenuItem Header="_Documentation" Click="OnDocumentation"/>
         <MenuItem Header="_About" Click="OnAbout"/>
       </MenuItem>
     </Menu>
