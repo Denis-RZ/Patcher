@@ -7,6 +7,7 @@ using Avalonia.Threading;
 using System.Collections.Generic;
 using System.IO;
 using System.Diagnostics;
+using System.Threading.Tasks;
 using System.Linq;
 using System;
 using UniversalCodePatcher.Core;
@@ -102,7 +103,7 @@ public partial class MainWindow : Window
             if (!Directory.Exists(dlg.ProjectPath))
                 Directory.CreateDirectory(dlg.ProjectPath);
             _projectPath = dlg.ProjectPath;
-            LoadProject(_projectPath);
+            await LoadProjectAsync(_projectPath);
             AddRecent(_projectPath);
         }
     }
@@ -122,7 +123,7 @@ public partial class MainWindow : Window
         if (path != null)
         {
             _projectPath = path;
-            LoadProject(_projectPath);
+            await LoadProjectAsync(_projectPath);
             AddRecent(_projectPath);
         }
     }
@@ -199,19 +200,19 @@ public partial class MainWindow : Window
         return false;
     }
 
-    private void OnRefresh(object? sender, RoutedEventArgs e)
+    private async void OnRefresh(object? sender, RoutedEventArgs e)
     {
         if (_projectPath != null)
-            LoadProject(_projectPath);
+            await LoadProjectAsync(_projectPath);
     }
 
-    private void OnToggleHidden(object? sender, RoutedEventArgs e)
+    private async void OnToggleHidden(object? sender, RoutedEventArgs e)
     {
         _showHiddenFiles = !_showHiddenFiles;
         _settings.ShowHiddenFiles = _showHiddenFiles;
         _settings.Save(SettingsFile);
         if (_projectPath != null)
-            LoadProject(_projectPath);
+            await LoadProjectAsync(_projectPath);
     }
 
     private void OnExpandTree(object? sender, RoutedEventArgs e) => SetExpand(ProjectTree, true);
@@ -317,7 +318,7 @@ public partial class MainWindow : Window
         foreach (var p in _recent)
         {
             var item = new MenuItem { Header = p };
-            item.Click += (_, __) => { _projectPath = p; LoadProject(p); };
+            item.Click += async (_, __) => { _projectPath = p; await LoadProjectAsync(p); };
             RecentMenu.Items.Add(item);
         }
     }
@@ -330,7 +331,7 @@ public partial class MainWindow : Window
         {
             _showHiddenFiles = _settings.ShowHiddenFiles;
             if (_projectPath != null)
-                LoadProject(_projectPath);
+                await LoadProjectAsync(_projectPath);
             _settings.Save(SettingsFile);
         }
     }
@@ -363,10 +364,11 @@ public partial class MainWindow : Window
         await about.ShowDialog(this);
     }
 
-    private void LoadProject(string path)
+    private async Task LoadProjectAsync(string path)
     {
         ProjectTree.Items.Clear();
-        foreach (var item in BuildTree(path))
+        var items = await Task.Run(() => BuildTree(path).ToList());
+        foreach (var item in items)
             ProjectTree.Items.Add(item);
         StatusText.Text = $"Loaded: {path}";
     }

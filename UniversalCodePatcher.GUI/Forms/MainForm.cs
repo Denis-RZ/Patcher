@@ -6,6 +6,7 @@ using System.Linq;
 using System.Windows.Forms;
 using System.Text.Json;
 using UniversalCodePatcher.Core;
+using System.Threading.Tasks;
 using UniversalCodePatcher.Interfaces;
 using UniversalCodePatcher.Modules.JavaScriptModule;
 using UniversalCodePatcher.Modules.CSharpModule;
@@ -350,7 +351,7 @@ namespace UniversalCodePatcher.Forms
                     switch (item.Text)
                     {
                         case "Refresh":
-                            item.Click += (s, e) => { if (projectPath != null) LoadProject(projectPath); };
+                            item.Click += async (s, e) => { if (projectPath != null) await LoadProjectAsync(projectPath); };
                             break;
                         case "Show All Files":
                             item.Click += OnToggleHidden;
@@ -436,20 +437,21 @@ namespace UniversalCodePatcher.Forms
             if (dlg.ShowDialog() == DialogResult.OK)
             {
                 projectPath = dlg.SelectedPath;
-                LoadProject(dlg.SelectedPath);
+                _ = LoadProjectAsync(dlg.SelectedPath);
                 AddRecent(projectPath);
             }
         }
 
-        private void LoadProject(string path)
+        private async Task LoadProjectAsync(string path)
         {
             try
             {
                 projectTree.BeginUpdate();
                 projectTree.Nodes.Clear();
                 var rootDir = new System.IO.DirectoryInfo(path);
-                var rootNode = projectTree.Nodes.Add(rootDir.Name);
-                AddDirectoryNodes(rootDir, rootNode);
+                var rootNode = new TreeNode(rootDir.Name) { Tag = rootDir.FullName };
+                await Task.Run(() => AddDirectoryNodes(rootDir, rootNode));
+                projectTree.Nodes.Add(rootNode);
                 rootNode.Expand();
                 infoLabel.Text = $"Files: {projectTree.GetNodeCount(true)}";
             }
@@ -618,7 +620,7 @@ namespace UniversalCodePatcher.Forms
             }
         }
 
-        private void OnNewProject(object? sender, EventArgs e)
+        private async void OnNewProject(object? sender, EventArgs e)
         {
             using var dlg = new NewProjectForm();
             if (dlg.ShowDialog(this) == DialogResult.OK)
@@ -626,7 +628,7 @@ namespace UniversalCodePatcher.Forms
                 if (!Directory.Exists(dlg.ProjectPath))
                     Directory.CreateDirectory(dlg.ProjectPath);
                 projectPath = dlg.ProjectPath;
-                LoadProject(projectPath);
+                await LoadProjectAsync(projectPath);
                 AddRecent(projectPath);
             }
         }
@@ -699,7 +701,7 @@ namespace UniversalCodePatcher.Forms
         private void OnToggleHidden(object? sender, EventArgs e)
         {
             showHiddenFiles = !showHiddenFiles;
-            if (projectPath != null) LoadProject(projectPath);
+            if (projectPath != null) _ = LoadProjectAsync(projectPath);
         }
 
         private void AddRecent(string path)
@@ -736,7 +738,7 @@ namespace UniversalCodePatcher.Forms
             foreach (var p in recentProjects.Take(5))
             {
                 var item = new ToolStripMenuItem(p);
-                item.Click += (s, e) => { projectPath = p; LoadProject(p); };
+                item.Click += async (s, e) => { projectPath = p; await LoadProjectAsync(p); };
                 recent.DropDownItems.Add(item);
             }
         }
