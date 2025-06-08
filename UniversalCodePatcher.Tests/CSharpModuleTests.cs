@@ -1,5 +1,6 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Linq;
+using System.Text;
 using UniversalCodePatcher.Modules.CSharpModule;
 using UniversalCodePatcher.Models;
 
@@ -16,6 +17,38 @@ namespace UniversalCodePatcher.Tests
         public void Foo() { }
     }
 }";
+
+        private const string PatternSample = @"namespace MyNamespace {
+    public class Service {
+        public void GetData() {}
+        public void SaveData() {}
+    }
+        }";
+
+        private const string AdvancedPatternSample = @"namespace MyNamespace {
+    public class Repository {
+        public void GetAdminUser() {}
+        public void SaveA() {}
+    }
+}";
+
+        private const string SignatureSample = @"namespace Demo {
+    public class Data {
+        public int Calc(int x) { return x; }
+    }
+}";
+
+        private static string GenerateClass(string name, params string[] members)
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine("namespace Generated {");
+            sb.AppendLine($"    public class {name} {{");
+            foreach (var m in members)
+                sb.AppendLine($"        {m}");
+            sb.AppendLine("    }");
+            sb.AppendLine("}");
+            return sb.ToString();
+        }
 
         [TestMethod]
         public void AnalyzeCode_ExtractsElements()
@@ -47,6 +80,341 @@ namespace UniversalCodePatcher.Tests
             Assert.IsTrue(result.Success, string.Join(";", result.Errors));
             var elements = module.AnalyzeCode(result.ModifiedCode, "CSharp").ToList();
             Assert.IsTrue(elements.Any(e => e.Type == CodeElementType.Property && e.Name == "Added"));
+        }
+
+        [TestMethod]
+        public void SymbolMatches_WildcardAndRegex()
+        {
+            var module = new CSharpModule();
+            module.Initialize(null);
+            var wildcardRule = new PatchRule
+            {
+                PatchType = PatchType.Delete,
+                TargetPattern = "*.Get*",
+                TargetLanguage = "CSharp",
+                TargetElementType = CodeElementType.Method
+            };
+            Assert.IsTrue(module.CanApplyPatch(PatternSample, wildcardRule, "CSharp"));
+
+            var regexRule = new PatchRule
+            {
+                PatchType = PatchType.Delete,
+                TargetPattern = "/Save.*Data/",
+                TargetLanguage = "CSharp",
+                TargetElementType = CodeElementType.Method
+            };
+            Assert.IsTrue(module.CanApplyPatch(PatternSample, regexRule, "CSharp"));
+        }
+
+        [TestMethod]
+        public void SymbolMatches_MorePatterns()
+        {
+            var module = new CSharpModule();
+            module.Initialize(null);
+
+            var wildcardRule = new PatchRule
+            {
+                PatchType = PatchType.Delete,
+                TargetPattern = "Save?",
+                TargetLanguage = "CSharp",
+                TargetElementType = CodeElementType.Method
+            };
+            Assert.IsTrue(module.CanApplyPatch(AdvancedPatternSample, wildcardRule, "CSharp"));
+
+            var regexRule = new PatchRule
+            {
+                PatchType = PatchType.Delete,
+                TargetPattern = "/Get.*User/",
+                TargetLanguage = "CSharp",
+                TargetElementType = CodeElementType.Method
+            };
+            Assert.IsTrue(module.CanApplyPatch(AdvancedPatternSample, regexRule, "CSharp"));
+        }
+
+        [TestMethod]
+        public void ApplyPatch_InsertBeforeAndAfter()
+        {
+            var module = new CSharpModule();
+            module.Initialize(null);
+
+            var beforeRule = new PatchRule
+            {
+                PatchType = PatchType.InsertBefore,
+                TargetPattern = "X",
+                TargetElementType = CodeElementType.Field,
+                TargetLanguage = "CSharp",
+                NewContent = "public int Y;"
+            };
+            var afterRule = new PatchRule
+            {
+                PatchType = PatchType.InsertAfter,
+                TargetPattern = "Foo",
+                TargetElementType = CodeElementType.Method,
+                TargetLanguage = "CSharp",
+                NewContent = "public void Bar() {}"
+            };
+
+            var result1 = module.ApplyPatch(SampleCode, beforeRule, "CSharp");
+            Assert.IsTrue(result1.Success, string.Join(";", result1.Errors));
+            var result2 = module.ApplyPatch(result1.ModifiedCode, afterRule, "CSharp");
+            Assert.IsTrue(result2.Success, string.Join(";", result2.Errors));
+            Assert.IsTrue(result2.ModifiedCode.Contains("public int Y"));
+            Assert.IsTrue(result2.ModifiedCode.Contains("Bar()"));
+        }
+
+        [TestMethod]
+        public void ApplyPatch_ChangeSignature()
+        {
+            var module = new CSharpModule();
+            module.Initialize(null);
+
+            var sigRule = new PatchRule
+            {
+                PatchType = PatchType.ChangeSignature,
+                TargetPattern = "Calc",
+                TargetElementType = CodeElementType.Method,
+                TargetLanguage = "CSharp",
+                NewContent = "public int Calc(int x, int y)"
+            };
+
+            var result = module.ApplyPatch(SignatureSample, sigRule, "CSharp");
+            Assert.IsTrue(result.Success, string.Join(";", result.Errors));
+            Assert.IsTrue(result.ModifiedCode.Contains("Calc(int x, int y)"));
+        }
+
+        [TestMethod]
+        public void ApplyPatch_AddAttribute_ChangeVisibility()
+        {
+            var module = new CSharpModule();
+            module.Initialize(null);
+
+            var attrRule = new PatchRule
+            {
+                PatchType = PatchType.AddAttribute,
+                TargetPattern = "Derived",
+                TargetElementType = CodeElementType.Class,
+                TargetLanguage = "CSharp",
+                NewContent = "System.Obsolete"
+            };
+
+            var visRule = new PatchRule
+            {
+                PatchType = PatchType.ChangeVisibility,
+                TargetPattern = "X",
+                TargetElementType = CodeElementType.Field,
+                TargetLanguage = "CSharp",
+                NewContent = "private"
+            };
+
+            var r1 = module.ApplyPatch(SampleCode, attrRule, "CSharp");
+            Assert.IsTrue(r1.Success, string.Join(";", r1.Errors));
+            var r2 = module.ApplyPatch(r1.ModifiedCode, visRule, "CSharp");
+            Assert.IsTrue(r2.Success, string.Join(";", r2.Errors));
+
+            Assert.IsTrue(r2.ModifiedCode.Contains("[System.Obsolete]"));
+            Assert.IsTrue(r2.ModifiedCode.Contains("private int X"));
+        }
+
+        [TestMethod]
+        public void SymbolMatches_NegativePatterns()
+        {
+            var module = new CSharpModule();
+            module.Initialize(null);
+
+            var wildcardRule = new PatchRule
+            {
+                PatchType = PatchType.Delete,
+                TargetPattern = "*.Foo*",
+                TargetLanguage = "CSharp",
+                TargetElementType = CodeElementType.Method
+            };
+            Assert.IsFalse(module.CanApplyPatch(PatternSample, wildcardRule, "CSharp"));
+
+            var regexRule = new PatchRule
+            {
+                PatchType = PatchType.Delete,
+                TargetPattern = "/Non.*Exist/",
+                TargetLanguage = "CSharp",
+                TargetElementType = CodeElementType.Method
+            };
+            Assert.IsFalse(module.CanApplyPatch(PatternSample, regexRule, "CSharp"));
+        }
+
+        [TestMethod]
+        public void ApplyPatch_InsertBefore_NoMatch()
+        {
+            var code = GenerateClass("Neg", "public int A;", "public void Do() {}");
+            var module = new CSharpModule();
+            module.Initialize(null);
+
+            var rule = new PatchRule
+            {
+                PatchType = PatchType.InsertBefore,
+                TargetPattern = "B",
+                TargetElementType = CodeElementType.Field,
+                TargetLanguage = "CSharp",
+                NewContent = "public int B;"
+            };
+
+            var result = module.ApplyPatch(code, rule, "CSharp");
+            Assert.IsFalse(result.Success);
+            Assert.AreEqual(code, result.ModifiedCode);
+            Assert.IsTrue(result.Errors.Any());
+        }
+
+        [TestMethod]
+        public void ApplyPatch_InsertAfter_NoMatch()
+        {
+            var code = GenerateClass("Neg", "public int A;", "public void Do() {}");
+            var module = new CSharpModule();
+            module.Initialize(null);
+
+            var rule = new PatchRule
+            {
+                PatchType = PatchType.InsertAfter,
+                TargetPattern = "Missing",
+                TargetElementType = CodeElementType.Method,
+                TargetLanguage = "CSharp",
+                NewContent = "public void Done() {}"
+            };
+
+            var result = module.ApplyPatch(code, rule, "CSharp");
+            Assert.IsFalse(result.Success);
+            Assert.AreEqual(code, result.ModifiedCode);
+            Assert.IsTrue(result.Errors.Any());
+        }
+
+        [TestMethod]
+        public void ApplyPatch_ChangeSignature_NoMatch()
+        {
+            var code = GenerateClass("Neg", "public int A;", "public void Do(int x) {}");
+            var module = new CSharpModule();
+            module.Initialize(null);
+
+            var rule = new PatchRule
+            {
+                PatchType = PatchType.ChangeSignature,
+                TargetPattern = "Unknown",
+                TargetElementType = CodeElementType.Method,
+                TargetLanguage = "CSharp",
+                NewContent = "public void Do(int x, int y)"
+            };
+
+            var result = module.ApplyPatch(code, rule, "CSharp");
+            Assert.IsFalse(result.Success);
+            Assert.AreEqual(code, result.ModifiedCode);
+            Assert.IsTrue(result.Errors.Any());
+        }
+
+        [TestMethod]
+        public void ApplyPatch_AddAttribute_NoMatch()
+        {
+            var code = GenerateClass("Neg", "public int A;", "public void Do() {}");
+            var module = new CSharpModule();
+            module.Initialize(null);
+
+            var rule = new PatchRule
+            {
+                PatchType = PatchType.AddAttribute,
+                TargetPattern = "MissingClass",
+                TargetElementType = CodeElementType.Class,
+                TargetLanguage = "CSharp",
+                NewContent = "System.Obsolete"
+            };
+
+            var result = module.ApplyPatch(code, rule, "CSharp");
+            Assert.IsFalse(result.Success);
+            Assert.AreEqual(code, result.ModifiedCode);
+            Assert.IsTrue(result.Errors.Any());
+        }
+
+        [TestMethod]
+        public void ApplyPatch_ChangeVisibility_NoMatch()
+        {
+            var code = GenerateClass("Neg", "public int A;", "public void Do() {}");
+            var module = new CSharpModule();
+            module.Initialize(null);
+
+            var rule = new PatchRule
+            {
+                PatchType = PatchType.ChangeVisibility,
+                TargetPattern = "B",
+                TargetElementType = CodeElementType.Field,
+                TargetLanguage = "CSharp",
+                NewContent = "private"
+            };
+
+            var result = module.ApplyPatch(code, rule, "CSharp");
+            Assert.IsFalse(result.Success);
+            Assert.AreEqual(code, result.ModifiedCode);
+            Assert.IsTrue(result.Errors.Any());
+        }
+
+        [TestMethod]
+        public void Integration_MultipleSequentialPatches()
+        {
+            var code = GenerateClass("Integration", "public int X;", "public void Do(int v) {}");
+            var module = new CSharpModule();
+            module.Initialize(null);
+
+            var beforeRule = new PatchRule
+            {
+                PatchType = PatchType.InsertBefore,
+                TargetPattern = "X",
+                TargetElementType = CodeElementType.Field,
+                TargetLanguage = "CSharp",
+                NewContent = "public int Y;"
+            };
+            var afterRule = new PatchRule
+            {
+                PatchType = PatchType.InsertAfter,
+                TargetPattern = "Do",
+                TargetElementType = CodeElementType.Method,
+                TargetLanguage = "CSharp",
+                NewContent = "public void Done() {}"
+            };
+            var sigRule = new PatchRule
+            {
+                PatchType = PatchType.ChangeSignature,
+                TargetPattern = "Do",
+                TargetElementType = CodeElementType.Method,
+                TargetLanguage = "CSharp",
+                NewContent = "public void Do(int v, string name)"
+            };
+            var attrRule = new PatchRule
+            {
+                PatchType = PatchType.AddAttribute,
+                TargetPattern = "Integration",
+                TargetElementType = CodeElementType.Class,
+                TargetLanguage = "CSharp",
+                NewContent = "System.Obsolete"
+            };
+            var visRule = new PatchRule
+            {
+                PatchType = PatchType.ChangeVisibility,
+                TargetPattern = "X",
+                TargetElementType = CodeElementType.Field,
+                TargetLanguage = "CSharp",
+                NewContent = "private"
+            };
+
+            var r1 = module.ApplyPatch(code, beforeRule, "CSharp");
+            Assert.IsTrue(r1.Success, string.Join(";", r1.Errors));
+            var r2 = module.ApplyPatch(r1.ModifiedCode, afterRule, "CSharp");
+            Assert.IsTrue(r2.Success, string.Join(";", r2.Errors));
+            var r3 = module.ApplyPatch(r2.ModifiedCode, sigRule, "CSharp");
+            Assert.IsTrue(r3.Success, string.Join(";", r3.Errors));
+            var r4 = module.ApplyPatch(r3.ModifiedCode, attrRule, "CSharp");
+            Assert.IsTrue(r4.Success, string.Join(";", r4.Errors));
+            var r5 = module.ApplyPatch(r4.ModifiedCode, visRule, "CSharp");
+            Assert.IsTrue(r5.Success, string.Join(";", r5.Errors));
+
+            var finalCode = r5.ModifiedCode;
+            Assert.IsTrue(finalCode.Contains("[System.Obsolete]"));
+            Assert.IsTrue(finalCode.Contains("public int Y"));
+            Assert.IsTrue(finalCode.Contains("private int X"));
+            Assert.IsTrue(finalCode.Contains("void Done()"));
+            Assert.IsTrue(finalCode.Contains("Do(int v, string name)"));
         }
     }
 }
