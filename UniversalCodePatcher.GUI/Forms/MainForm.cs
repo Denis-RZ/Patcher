@@ -4,6 +4,7 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Windows.Forms;
+using UniversalCodePatcher.Controls;
 using System.Text.Json;
 using UniversalCodePatcher.Core;
 using System.Threading.Tasks;
@@ -21,7 +22,8 @@ namespace UniversalCodePatcher.Forms
         private MenuStrip menuStrip = null!;
         private ToolStrip toolStrip = null!;
         private StatusStrip statusStrip = null!;
-        private SplitContainer verticalSplit = null!;
+        private ResizablePanel projectPanel = null!;
+        private Panel mainPanel = null!;
         private SplitContainer horizontalSplit = null!;
         private Label projectFilesLabel = null!;
         private TreeView projectTree = null!;
@@ -29,15 +31,15 @@ namespace UniversalCodePatcher.Forms
         private TabPage sourceTab = null!;
         private TabPage previewTab = null!;
         private TabPage rulesTab = null!;
-        private RichTextBox sourceBox = null!;
-        private RichTextBox previewBox = null!;
+        private CodeEditor sourceBox = null!;
+        private CodeEditor previewBox = null!;
         private DataGridView rulesGrid = null!;
         private GroupBox resultsGroup = null!;
         private ListView resultsList = null!;
         private FlowLayoutPanel actionFlow = null!;
-        private Button applyButton = null!;
-        private Button previewButton = null!;
-        private Button cancelButton = null!;
+        private ModernButton applyButton = null!;
+        private ModernButton previewButton = null!;
+        private ModernButton cancelButton = null!;
         private ToolStripStatusLabel statusLabel = null!;
         private ToolStripProgressBar progressBar = null!;
         private ToolStripStatusLabel infoLabel = null!;
@@ -92,14 +94,26 @@ namespace UniversalCodePatcher.Forms
         {
             SuspendLayout();
 
-            // Form settings
             ClientSize = new Size(1024, 768);
             MinimumSize = new Size(800, 600);
             WindowState = FormWindowState.Maximized;
             StartPosition = FormStartPosition.CenterScreen;
             Text = "Universal Code Patcher";
 
-            // MenuStrip
+            CreateMenuStrip();
+            CreateToolStrip();
+            CreateStatusBar();
+            CreateMainLayout();
+
+            ResumeLayout(false);
+            PerformLayout();
+
+            LoadSampleTree();
+            WireEvents();
+            ConfigureDataViews();
+        }
+        private void CreateMenuStrip()
+        {
             menuStrip = new MenuStrip();
             var fileMenu = new ToolStripMenuItem("File");
             fileMenu.DropDownItems.Add("New Project");
@@ -141,71 +155,38 @@ namespace UniversalCodePatcher.Forms
             });
             menuStrip.Items.AddRange(new[] { fileMenu, editMenu, viewMenu, toolsMenu, helpMenu });
             menuStrip.Dock = DockStyle.Top;
+            Controls.Add(menuStrip);
+            MainMenuStrip = menuStrip;
+        }
 
-            // ToolStrip
+        private void CreateToolStrip()
+        {
             toolStrip = new ToolStrip { Dock = DockStyle.Top, ImageScalingSize = new Size(16, 16), Height = 25 };
-            toolStrip.Items.Add(new ToolStripButton
-            {
-                Image = SystemIcons.Application.ToBitmap(),
-                ToolTipText = "New"
-            });
-            toolStrip.Items.Add(new ToolStripButton
-            {
-                Image = SystemIcons.Application.ToBitmap(),
-                ToolTipText = "Open"
-            });
-            toolStrip.Items.Add(new ToolStripButton
-            {
-                Image = SystemIcons.Application.ToBitmap(),
-                ToolTipText = "Save"
-            });
+            toolStrip.Items.Add(new ToolStripButton { Image = SystemIcons.Application.ToBitmap(), ToolTipText = "New" });
+            toolStrip.Items.Add(new ToolStripButton { Image = SystemIcons.Application.ToBitmap(), ToolTipText = "Open" });
+            toolStrip.Items.Add(new ToolStripButton { Image = SystemIcons.Application.ToBitmap(), ToolTipText = "Save" });
             toolStrip.Items.Add(new ToolStripSeparator());
-            toolStrip.Items.Add(new ToolStripButton
-            {
-                Image = SystemIcons.Application.ToBitmap(),
-                ToolTipText = "Patch"
-            });
-            toolStrip.Items.Add(new ToolStripButton
-            {
-                Image = SystemIcons.Application.ToBitmap(),
-                ToolTipText = "Preview"
-            });
-            toolStrip.Items.Add(new ToolStripButton
-            {
-                Image = SystemIcons.Application.ToBitmap(),
-                ToolTipText = "Undo"
-            });
-            toolStrip.Items.Add(new ToolStripButton
-            {
-                Image = SystemIcons.Application.ToBitmap(),
-                ToolTipText = "Redo"
-            });
+            toolStrip.Items.Add(new ToolStripButton { Image = SystemIcons.Application.ToBitmap(), ToolTipText = "Patch" });
+            toolStrip.Items.Add(new ToolStripButton { Image = SystemIcons.Application.ToBitmap(), ToolTipText = "Preview" });
+            toolStrip.Items.Add(new ToolStripButton { Image = SystemIcons.Application.ToBitmap(), ToolTipText = "Undo" });
+            toolStrip.Items.Add(new ToolStripButton { Image = SystemIcons.Application.ToBitmap(), ToolTipText = "Redo" });
+            Controls.Add(toolStrip);
+        }
 
-            // StatusStrip
+        private void CreateStatusBar()
+        {
             statusStrip = new StatusStrip();
             statusLabel = new ToolStripStatusLabel("Ready");
             progressBar = new ToolStripProgressBar { Visible = false, AutoSize = false, Size = new Size(200, 16) };
             infoLabel = new ToolStripStatusLabel("Files: 0 | Modified: 0");
             statusStrip.Items.AddRange(new ToolStripItem[] { statusLabel, progressBar, infoLabel });
             statusStrip.Dock = DockStyle.Bottom;
+            Controls.Add(statusStrip);
+        }
 
-            // Split containers
-            verticalSplit = new SplitContainer
-            {
-                Dock = DockStyle.Fill,
-                Orientation = Orientation.Vertical,
-                SplitterDistance = 250,
-                Panel1MinSize = 200
-            };
-
-            horizontalSplit = new SplitContainer
-            {
-                Dock = DockStyle.Fill,
-                Orientation = Orientation.Horizontal,
-                SplitterDistance = 400
-            };
-
-            // Panel1 of verticalSplit
+        private void CreateMainLayout()
+        {
+            projectPanel = new ResizablePanel { Dock = DockStyle.Left, WidthPercentage = 0.25, MinimumWidth = 200 };
             projectFilesLabel = new Label { Text = "Project Files", Dock = DockStyle.Top, Height = 20 };
             projectTree = new TreeView
             {
@@ -215,43 +196,33 @@ namespace UniversalCodePatcher.Forms
                 ShowLines = true,
                 Font = new Font("Segoe UI", 9F)
             };
-            verticalSplit.Panel1.Controls.Add(projectTree);
-            verticalSplit.Panel1.Controls.Add(projectFilesLabel);
-            verticalSplit.Panel1.Controls.SetChildIndex(projectFilesLabel, 0);
+            projectPanel.Controls.Add(projectTree);
+            projectPanel.Controls.Add(projectFilesLabel);
+            projectPanel.Controls.SetChildIndex(projectFilesLabel, 0);
 
-            // Tab control for code and rules
+            mainPanel = new Panel { Dock = DockStyle.Fill };
+            horizontalSplit = new SplitContainer { Dock = DockStyle.Fill, Orientation = Orientation.Horizontal, SplitterDistance = 400 };
+
             tabControl = new TabControl { Dock = DockStyle.Fill };
             sourceTab = new TabPage("Source Code");
             previewTab = new TabPage("Preview Changes");
             rulesTab = new TabPage("Patch Rules");
-            sourceBox = new RichTextBox
-            {
-                Dock = DockStyle.Fill,
-                ReadOnly = false,
-                Font = new Font("Consolas", 9F)
-            };
-            previewBox = new RichTextBox { Dock = DockStyle.Fill, ReadOnly = true, Font = new Font("Consolas", 9F) };
+            sourceBox = new CodeEditor { Dock = DockStyle.Fill, ReadOnly = false, Font = new Font("Consolas", 9F) };
+            previewBox = new CodeEditor { Dock = DockStyle.Fill, ReadOnly = true, Font = new Font("Consolas", 9F) };
             rulesGrid = new DataGridView { Dock = DockStyle.Fill };
             sourceTab.Controls.Add(sourceBox);
             previewTab.Controls.Add(previewBox);
             rulesTab.Controls.Add(rulesGrid);
             tabControl.TabPages.AddRange(new[] { sourceTab, previewTab, rulesTab });
-
-            // ensure source tab visible/enabled
-            sourceTab.Enabled = true;
-            sourceBox.Visible = true;
-
             horizontalSplit.Panel1.Controls.Add(tabControl);
 
-            // Results group
             resultsGroup = new GroupBox { Text = "Patch Results", Dock = DockStyle.Fill };
             resultsList = new ListView { Dock = DockStyle.Fill, View = View.Details, FullRowSelect = true };
             resultsGroup.Controls.Add(resultsList);
             horizontalSplit.Panel2.Controls.Add(resultsGroup);
 
-            verticalSplit.Panel2.Controls.Add(horizontalSplit);
+            mainPanel.Controls.Add(horizontalSplit);
 
-            // Bottom panel with buttons
             var bottomPanel = new Panel { Dock = DockStyle.Bottom, Height = 40 };
             actionFlow = new FlowLayoutPanel
             {
@@ -259,36 +230,28 @@ namespace UniversalCodePatcher.Forms
                 FlowDirection = FlowDirection.RightToLeft,
                 WrapContents = false
             };
-            applyButton = new Button { Text = "Apply Patches", Size = new Size(90, 23), Margin = new Padding(3) };
-            previewButton = new Button { Text = "Preview", Size = new Size(75, 23), Margin = new Padding(3) };
-            cancelButton = new Button { Text = "Cancel", Size = new Size(75, 23), Margin = new Padding(3) };
+            applyButton = new ModernButton { Text = "Apply Patches", Size = new Size(90, 23), Margin = new Padding(3) };
+            previewButton = new ModernButton { Text = "Preview", Size = new Size(75, 23), Margin = new Padding(3) };
+            cancelButton = new ModernButton { Text = "Cancel", Size = new Size(75, 23), Margin = new Padding(3) };
             actionFlow.Controls.Add(applyButton);
             actionFlow.Controls.Add(previewButton);
             actionFlow.Controls.Add(cancelButton);
             bottomPanel.Controls.Add(actionFlow);
-            verticalSplit.Panel2.Controls.Add(bottomPanel);
+            mainPanel.Controls.Add(bottomPanel);
 
-            // Add root controls
-            Controls.Add(verticalSplit);
-            Controls.Add(statusStrip);
-            Controls.Add(toolStrip);
-            Controls.Add(menuStrip);
-            MainMenuStrip = menuStrip;
+            Controls.Add(projectPanel);
+            Controls.Add(mainPanel);
+        }
 
-            ResumeLayout(false);
-            PerformLayout();
-
-            // sample tree structure
-            LoadSampleTree();
-
-            // wire events
+        private void WireEvents()
+        {
             previewButton.Click += OnPreview;
             applyButton.Click += OnApplyPatches;
             projectTree.AfterSelect += OnTreeAfterSelect;
             projectTree.AfterCheck += (_, __) => isDirty = true;
             rulesGrid.CellValueChanged += (_, __) => isDirty = true;
 
-            fileMenu = menuStrip.Items[0] as ToolStripMenuItem;
+            var fileMenu = menuStrip.Items[0] as ToolStripMenuItem;
             if (fileMenu != null)
             {
                 foreach (ToolStripItem item in fileMenu.DropDownItems)
@@ -305,7 +268,6 @@ namespace UniversalCodePatcher.Forms
                             item.Click += OnSaveProject;
                             break;
                         case "Recent":
-                            // items populated later
                             break;
                         case "Exit":
                             item.Click += OnExit;
@@ -408,8 +370,10 @@ namespace UniversalCodePatcher.Forms
                     }
                 }
             }
+        }
 
-            // configure grids and lists
+        private void ConfigureDataViews()
+        {
             rulesGrid.Columns.Add("Rule", "Rule");
             rulesGrid.Columns.Add("Pattern", "Pattern");
             rulesGrid.Columns.Add("Replacement", "Replacement");
@@ -430,7 +394,6 @@ namespace UniversalCodePatcher.Forms
             folder.Nodes.Add("Class2.cs");
             root.ExpandAll();
         }
-
         private void OnOpenProject(object? sender, EventArgs e)
         {
             using var dlg = new FolderBrowserDialog();
