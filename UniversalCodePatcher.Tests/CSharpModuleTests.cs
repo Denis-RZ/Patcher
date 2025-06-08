@@ -38,6 +38,7 @@ namespace UniversalCodePatcher.Tests
     }
 }";
 
+ 
         private static string GenerateClass(string name, params string[] members)
         {
             var sb = new StringBuilder();
@@ -49,7 +50,7 @@ namespace UniversalCodePatcher.Tests
             sb.AppendLine("}");
             return sb.ToString();
         }
-
+ 
         [TestMethod]
         public void AnalyzeCode_ExtractsElements()
         {
@@ -214,6 +215,7 @@ namespace UniversalCodePatcher.Tests
             Assert.IsTrue(r2.ModifiedCode.Contains("[System.Obsolete]"));
             Assert.IsTrue(r2.ModifiedCode.Contains("private int X"));
         }
+ 
 
         [TestMethod]
         public void SymbolMatches_NegativePatterns()
@@ -416,5 +418,6 @@ namespace UniversalCodePatcher.Tests
             Assert.IsTrue(finalCode.Contains("void Done()"));
             Assert.IsTrue(finalCode.Contains("Do(int v, string name)"));
         }
+ 
     }
 }
