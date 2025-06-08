@@ -26,7 +26,14 @@ namespace UniversalCodePatcher.Modules.CSharpModule
 
         public IEnumerable<PatchType> SupportedPatchTypes => new[]
         {
-            PatchType.Replace, PatchType.InsertBefore, PatchType.InsertAfter, PatchType.Delete, PatchType.Modify
+            PatchType.Replace,
+            PatchType.InsertBefore,
+            PatchType.InsertAfter,
+            PatchType.Delete,
+            PatchType.Modify,
+            PatchType.ChangeSignature,
+            PatchType.AddAttribute,
+            PatchType.ChangeVisibility
         };
 
         public IEnumerable<string> SupportedLanguages => new[] { "CSharp" };
@@ -190,6 +197,26 @@ namespace UniversalCodePatcher.Modules.CSharpModule
                     case PatchType.Delete:
                         newRoot = root.RemoveNode(targetNode, SyntaxRemoveOptions.KeepNoTrivia);
                         break;
+                    case PatchType.InsertBefore:
+                        var beforeNode = SyntaxFactory.ParseMemberDeclaration(rule.NewContent);
+                        if (beforeNode == null)
+                        {
+                            result.Errors.Add("Invalid new content");
+                            result.ModifiedCode = originalCode;
+                            return result;
+                        }
+                        newRoot = root.InsertNodesBefore(targetNode, new[] { beforeNode });
+                        break;
+                    case PatchType.InsertAfter:
+                        var afterNode = SyntaxFactory.ParseMemberDeclaration(rule.NewContent);
+                        if (afterNode == null)
+                        {
+                            result.Errors.Add("Invalid new content");
+                            result.ModifiedCode = originalCode;
+                            return result;
+                        }
+                        newRoot = root.InsertNodesAfter(targetNode, new[] { afterNode });
+                        break;
                     case PatchType.Modify when rule.TargetElementType == CodeElementType.Class:
                         var classNode = targetNode as ClassDeclarationSyntax;
                         var memberToAdd = SyntaxFactory.ParseMemberDeclaration(rule.NewContent);
@@ -201,6 +228,72 @@ namespace UniversalCodePatcher.Modules.CSharpModule
                         else
                         {
                             result.Errors.Add("Invalid class modification");
+                            result.ModifiedCode = originalCode;
+                            return result;
+                        }
+                        break;
+                    case PatchType.ChangeSignature:
+                        if (targetNode is MethodDeclarationSyntax methodNode)
+                        {
+                            var sigNode = SyntaxFactory.ParseMemberDeclaration(rule.NewContent) as MethodDeclarationSyntax;
+                            if (sigNode == null)
+                            {
+                                result.Errors.Add("Invalid new content");
+                                result.ModifiedCode = originalCode;
+                                return result;
+                            }
+                            var updatedMethod = methodNode.WithParameterList(sigNode.ParameterList)
+                                                         .WithReturnType(sigNode.ReturnType);
+                            newRoot = root.ReplaceNode(methodNode, updatedMethod);
+                        }
+                        else
+                        {
+                            result.Errors.Add("ChangeSignature applicable only to methods");
+                            result.ModifiedCode = originalCode;
+                            return result;
+                        }
+                        break;
+                    case PatchType.AddAttribute:
+                        if (targetNode is MemberDeclarationSyntax memberNode)
+                        {
+                            var text = rule.NewContent.Trim().Trim('[', ']');
+                            var attribute = SyntaxFactory.Attribute(SyntaxFactory.ParseName(text));
+                            var attrList = SyntaxFactory.AttributeList(SyntaxFactory.SingletonSeparatedList(attribute));
+                            var updatedMember = memberNode.AddAttributeLists(attrList);
+                            newRoot = root.ReplaceNode(memberNode, updatedMember);
+                        }
+                        else
+                        {
+                            result.Errors.Add("AddAttribute target not supported");
+                            result.ModifiedCode = originalCode;
+                            return result;
+                        }
+                        break;
+                    case PatchType.ChangeVisibility:
+                        if (targetNode is MemberDeclarationSyntax visibilityNode)
+                        {
+                            var accessibility = rule.NewContent.ToLower() switch
+                            {
+                                "public" => Accessibility.Public,
+                                "private" => Accessibility.Private,
+                                "protected" => Accessibility.Protected,
+                                "internal" => Accessibility.Internal,
+                                "protected internal" => Accessibility.ProtectedOrInternal,
+                                "private protected" => Accessibility.ProtectedAndInternal,
+                                _ => (Accessibility?)null
+                            };
+                            if (accessibility == null)
+                            {
+                                result.Errors.Add("Invalid accessibility");
+                                result.ModifiedCode = originalCode;
+                                return result;
+                            }
+                            var updatedVis = generator.WithAccessibility(visibilityNode, accessibility.Value);
+                            newRoot = root.ReplaceNode(visibilityNode, updatedVis);
+                        }
+                        else
+                        {
+                            result.Errors.Add("ChangeVisibility target not supported");
                             result.ModifiedCode = originalCode;
                             return result;
                         }
@@ -262,7 +355,26 @@ namespace UniversalCodePatcher.Modules.CSharpModule
         private static bool SymbolMatches(ISymbol? symbol, string pattern)
         {
             if (symbol == null) return false;
-            return symbol.Name == pattern || symbol.ToDisplayString() == pattern;
+
+            // Regex pattern between / / takes precedence
+            if (pattern.StartsWith("/") && pattern.EndsWith("/") && pattern.Length > 2)
+            {
+                var regex = new System.Text.RegularExpressions.Regex(pattern.Trim('/'), System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                return regex.IsMatch(symbol.Name) || regex.IsMatch(symbol.ToDisplayString());
+            }
+
+            // Wildcard support (* and ?)
+            if (pattern.Contains('*') || pattern.Contains('?'))
+            {
+                var regexPattern = "^" + System.Text.RegularExpressions.Regex.Escape(pattern)
+                    .Replace("\\*", ".*")
+                    .Replace("\\?", ".") + "$";
+                var regex = new System.Text.RegularExpressions.Regex(regexPattern, System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                return regex.IsMatch(symbol.Name) || regex.IsMatch(symbol.ToDisplayString());
+            }
+
+            return string.Equals(symbol.Name, pattern, StringComparison.OrdinalIgnoreCase)
+                   || string.Equals(symbol.ToDisplayString(), pattern, StringComparison.OrdinalIgnoreCase);
         }
 
         public bool CanApplyPatch(string code, PatchRule rule, string language)
