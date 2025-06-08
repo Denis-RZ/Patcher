@@ -24,6 +24,13 @@ namespace UniversalCodePatcher.Tests
     }
         }";
 
+        private const string AdvancedPatternSample = @"namespace MyNamespace {
+    public class Repository {
+        public void GetAdminUser() {}
+        public void SaveA() {}
+    }
+}";
+
         private const string SignatureSample = @"namespace Demo {
     public class Data {
         public int Calc(int x) { return x; }
@@ -84,6 +91,31 @@ namespace UniversalCodePatcher.Tests
                 TargetElementType = CodeElementType.Method
             };
             Assert.IsTrue(module.CanApplyPatch(PatternSample, regexRule, "CSharp"));
+        }
+
+        [TestMethod]
+        public void SymbolMatches_MorePatterns()
+        {
+            var module = new CSharpModule();
+            module.Initialize(null);
+
+            var wildcardRule = new PatchRule
+            {
+                PatchType = PatchType.Delete,
+                TargetPattern = "Save?",
+                TargetLanguage = "CSharp",
+                TargetElementType = CodeElementType.Method
+            };
+            Assert.IsTrue(module.CanApplyPatch(AdvancedPatternSample, wildcardRule, "CSharp"));
+
+            var regexRule = new PatchRule
+            {
+                PatchType = PatchType.Delete,
+                TargetPattern = "/Get.*User/",
+                TargetLanguage = "CSharp",
+                TargetElementType = CodeElementType.Method
+            };
+            Assert.IsTrue(module.CanApplyPatch(AdvancedPatternSample, regexRule, "CSharp"));
         }
 
         [TestMethod]
