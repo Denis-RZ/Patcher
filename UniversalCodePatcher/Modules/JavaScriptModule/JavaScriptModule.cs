@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
+using Esprima;
+using Esprima.Ast;
 using UniversalCodePatcher.Core;
 using UniversalCodePatcher.Interfaces;
 using UniversalCodePatcher.Models;
@@ -20,12 +22,9 @@ namespace UniversalCodePatcher.Modules.JavaScriptModule
         
         public IEnumerable<string> SupportedLanguages => new[] { "JavaScript", "TypeScript" };
         public IEnumerable<PatchType> SupportedPatchTypes => Enum.GetValues<PatchType>();
-        
-        private readonly Dictionary<string, Regex> _patterns = new();
-        
+
         protected override bool OnInitialize()
         {
-            InitializePatterns();
             
             // Регистрируем сервисы
             ServiceContainer?.RegisterInstance<ICodeAnalyzer>(this);
@@ -35,105 +34,132 @@ namespace UniversalCodePatcher.Modules.JavaScriptModule
             return true;
         }
         
-        private void InitializePatterns()
-        {
-            _patterns["function"] = new Regex(
-                @"(?:export\s+)?(?:async\s+)?function\s+(\w+)\s*\(([^)]*)\)\s*(?::\s*[^{]+)?\s*\{(?:[^{}]++|(?<open>\{)|(?<-open>\}))+(?(open)(?!))\}",
-                RegexOptions.Compiled | RegexOptions.Singleline
-            );
-            
-            _patterns["arrow_function"] = new Regex(
-                @"(?:const|let|var)\s+(\w+)\s*=\s*(?:async\s+)?\(([^)]*)\)\s*(?::\s*[^=]+)?\s*=>\s*(?:\{(?:[^{}]++|(?<open>\{)|(?<-open>\}))+(?(open)(?!))\}|[^;,\n]+)",
-                RegexOptions.Compiled | RegexOptions.Singleline
-            );
-            
-            _patterns["class"] = new Regex(
-                @"(?:export\s+)?(?:abstract\s+)?class\s+(\w+)(?:\s+extends\s+(\w+))?(?:\s+implements\s+([^{]+))?\s*\{(?:[^{}]++|(?<open>\{)|(?<-open>\}))+(?(open)(?!))\}",
-                RegexOptions.Compiled | RegexOptions.Singleline
-            );
-            
-            _patterns["method"] = new Regex(
-                @"(?:(?:public|private|protected|static|async|get|set)\s+)*(\w+)\s*\(([^)]*)\)\s*(?::\s*[^{]+)?\s*\{(?:[^{}]++|(?<open>\{)|(?<-open>\}))+(?(open)(?!))\}",
-                RegexOptions.Compiled | RegexOptions.Singleline
-            );
-        }
-        
         public IEnumerable<CodeElement> AnalyzeCode(string code, string language)
         {
             if (!SupportedLanguages.Contains(language))
                 return Enumerable.Empty<CodeElement>();
-            
+
             var elements = new List<CodeElement>();
-            var lines = code.Split('\n');
-            
-            // Анализируем функции
-            foreach (var match in _patterns["function"].Matches(code).Cast<Match>())
+            Script script;
+            try
             {
-                elements.Add(CreateCodeElement(match, CodeElementType.Function, lines, code));
+                script = new JavaScriptParser(code, new ParserOptions { Tolerant = true }).ParseScript();
             }
-            
-            // Анализируем стрелочные функции
-            foreach (var match in _patterns["arrow_function"].Matches(code).Cast<Match>())
+            catch (ParserException ex)
             {
-                elements.Add(CreateCodeElement(match, CodeElementType.Lambda, lines, code));
+                OnError($"Parse error: {ex.Description}");
+                return Enumerable.Empty<CodeElement>();
             }
-            
-            // Анализируем классы
-            foreach (var match in _patterns["class"].Matches(code).Cast<Match>())
+
+            var nodes = Traverse(script).ToList();
+            foreach (var node in nodes)
             {
-                elements.Add(CreateCodeElement(match, CodeElementType.Class, lines, code));
+                switch (node)
+                {
+                    case FunctionDeclaration func:
+                        elements.Add(CreateCodeElement(func, CodeElementType.Function, code, nodes, script));
+                        break;
+                    case ArrowFunctionExpression arrow:
+                        elements.Add(CreateCodeElement(arrow, CodeElementType.Lambda, code, nodes, script));
+                        break;
+                    case ClassDeclaration cls:
+                        elements.Add(CreateCodeElement(cls, CodeElementType.Class, code, nodes, script));
+                        foreach (var method in cls.Body.Body.OfType<MethodDefinition>())
+                        {
+                            elements.Add(CreateCodeElement(method, CodeElementType.Method, code, nodes, script));
+                        }
+                        break;
+                }
             }
-            
-            // Анализируем методы
-            foreach (var match in _patterns["method"].Matches(code).Cast<Match>())
-            {
-                elements.Add(CreateCodeElement(match, CodeElementType.Method, lines, code));
-            }
-            
+
             return elements.OrderBy(e => e.StartLine);
         }
         
-        private CodeElement CreateCodeElement(Match match, CodeElementType type, string[] lines, string fullCode)
+        private CodeElement CreateCodeElement(Node node, CodeElementType type, string fullCode, IEnumerable<Node> allNodes, Script root)
         {
             var element = new CodeElement
             {
                 Type = type,
-                Content = match.Value,
-                Language = "JavaScript"
+                Content = fullCode.Substring(node.Range.Start, node.Range.End - node.Range.Start),
+                Language = "JavaScript",
+                StartLine = node.Location.Start.Line,
+                EndLine = node.Location.End.Line,
+                StartColumn = node.Location.Start.Column,
+                EndColumn = node.Location.End.Column
             };
-            
-            // Извлекаем имя
-            if (match.Groups.Count > 1)
+
+            switch (node)
             {
-                element.Name = match.Groups[1].Value;
+                case FunctionDeclaration func:
+                    element.Name = func.Id?.Name ?? string.Empty;
+                    element.Parameters = func.Params.Select(p => ExtractParameterName(p, fullCode)).ToArray();
+                    break;
+                case ArrowFunctionExpression arrow:
+                    element.Name = GetArrowFunctionName(arrow, allNodes);
+                    element.Parameters = arrow.Params.Select(p => ExtractParameterName(p, fullCode)).ToArray();
+                    break;
+                case ClassDeclaration cls:
+                    element.Name = cls.Id?.Name ?? string.Empty;
+                    break;
+                case MethodDefinition method:
+                    element.Name = ExtractPropertyName(method.Key, fullCode);
+                    if (method.Value is FunctionExpression fe)
+                        element.Parameters = fe.Params.Select(p => ExtractParameterName(p, fullCode)).ToArray();
+                    break;
             }
-            
-            // Вычисляем позицию
-            var beforeMatch = fullCode.Substring(0, match.Index);
-            element.StartLine = beforeMatch.Split('\n').Length;
-            element.EndLine = element.StartLine + match.Value.Split('\n').Length - 1;
-            
-            // Извлекаем параметры
-            if (match.Groups.Count > 2 && type != CodeElementType.Class)
-            {
-                element.Parameters = ParseParameters(match.Groups[2].Value);
-            }
-            
-            // Генерируем сигнатуру
+
             element.Signature = $"{type}:{element.Name}({string.Join(",", element.Parameters)})";
-            
             return element;
         }
-        
-        private string[] ParseParameters(string paramString)
+
+        private static string ExtractParameterName(Expression expr, string code)
         {
-            if (string.IsNullOrWhiteSpace(paramString))
-                return Array.Empty<string>();
-            
-            return paramString.Split(',')
-                .Select(p => p.Trim())
-                .Where(p => !string.IsNullOrEmpty(p))
-                .ToArray();
+            return expr switch
+            {
+                Identifier id => id.Name,
+                AssignmentPattern ap => ExtractParameterName(ap.Left, code),
+                RestElement rest => "..." + ExtractParameterName(rest.Argument, code),
+                _ => code.Substring(expr.Range.Start, expr.Range.End - expr.Range.Start)
+            };
+        }
+
+        private static string ExtractPropertyName(Expression expr, string code)
+        {
+            return expr switch
+            {
+                Identifier id => id.Name,
+                Literal lit => lit.Value?.ToString() ?? string.Empty,
+                _ => code.Substring(expr.Range.Start, expr.Range.End - expr.Range.Start)
+            };
+        }
+
+        private static string GetArrowFunctionName(ArrowFunctionExpression arrow, IEnumerable<Node> nodes)
+        {
+            var vd = nodes.OfType<VariableDeclarator>().FirstOrDefault(d => object.ReferenceEquals(d.Init, arrow));
+            if (vd != null && vd.Id is Identifier vid)
+                return vid.Name;
+
+            var assign = nodes.OfType<AssignmentExpression>().FirstOrDefault(a => object.ReferenceEquals(a.Right, arrow));
+            if (assign != null && assign.Left is Identifier aid)
+                return aid.Name;
+
+            return string.Empty;
+        }
+
+        private static IEnumerable<Node> Traverse(Node root)
+        {
+            var stack = new Stack<Node>();
+            stack.Push(root);
+            while (stack.Count > 0)
+            {
+                var current = stack.Pop();
+                yield return current;
+                foreach (var child in current.ChildNodes)
+                {
+                    if (child != null)
+                        stack.Push(child);
+                }
+            }
         }
         
         public IEnumerable<CodeElement> FindElements(IEnumerable<CodeElement> elements, string pattern)
@@ -144,45 +170,31 @@ namespace UniversalCodePatcher.Modules.JavaScriptModule
         
         public SyntaxValidationResult ValidateSyntax(string code, string language)
         {
-            // Базовая валидация синтаксиса
             var result = new SyntaxValidationResult { IsValid = true };
-            
-            // Проверка парности скобок
-            var braceCount = 0;
-            var parenCount = 0;
-            var bracketCount = 0;
-            
-            for (int i = 0; i < code.Length; i++)
+
+            if (!SupportedLanguages.Contains(language))
             {
-                switch (code[i])
+                result.IsValid = false;
+                result.Errors.Add(new SyntaxError { Message = $"Unsupported language: {language}", ErrorCode = "JS_UNSUPPORTED" });
+                return result;
+            }
+
+            try
+            {
+                new JavaScriptParser(code, new ParserOptions { Tolerant = false }).ParseScript();
+            }
+            catch (ParserException ex)
+            {
+                result.IsValid = false;
+                result.Errors.Add(new SyntaxError
                 {
-                    case '{': braceCount++; break;
-                    case '}': braceCount--; break;
-                    case '(': parenCount++; break;
-                    case ')': parenCount--; break;
-                    case '[': bracketCount++; break;
-                    case ']': bracketCount--; break;
-                }
+                    Message = ex.Description,
+                    Line = ex.LineNumber,
+                    Column = ex.Column,
+                    ErrorCode = "JS_PARSE"
+                });
             }
-            
-            if (braceCount != 0)
-            {
-                result.IsValid = false;
-                result.Errors.Add(new SyntaxError { Message = "Unmatched braces", ErrorCode = "JS001" });
-            }
-            
-            if (parenCount != 0)
-            {
-                result.IsValid = false;
-                result.Errors.Add(new SyntaxError { Message = "Unmatched parentheses", ErrorCode = "JS002" });
-            }
-            
-            if (bracketCount != 0)
-            {
-                result.IsValid = false;
-                result.Errors.Add(new SyntaxError { Message = "Unmatched brackets", ErrorCode = "JS003" });
-            }
-            
+
             return result;
         }
         
