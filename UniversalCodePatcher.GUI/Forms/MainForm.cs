@@ -22,7 +22,7 @@ namespace UniversalCodePatcher.Forms
         private MenuStrip menuStrip = null!;
         private ToolStrip toolStrip = null!;
         private StatusStrip statusStrip = null!;
-        private SplitContainer mainSplit = null!;
+        private SplitContainer mainSplitter = null!;
         private SplitContainer rightSplit = null!;
         private TableLayoutPanel buttonTable = null!;
         private Label projectFilesLabel = null!;
@@ -63,6 +63,22 @@ namespace UniversalCodePatcher.Forms
             InitializeComponent();
             InitializeBusinessLogic();
             LoadRecentProjects();
+            Load += (_, __) =>
+            {
+                if (mainSplitter != null)
+                {
+                    mainSplitter.Panel1MinSize = 200;
+                    mainSplitter.Panel2MinSize = 300;
+                }
+
+                if (rightSplit != null)
+                {
+                    rightSplit.Panel1MinSize = 100;
+                    rightSplit.Panel2MinSize = 100;
+                }
+
+                SetInitialSplitterPosition();
+            };
         }
 
         private void InitializeBusinessLogic()
@@ -185,12 +201,10 @@ namespace UniversalCodePatcher.Forms
 
         private void CreateMainLayout()
         {
-            mainSplit = new SplitContainer
+            mainSplitter = new SplitContainer
             {
                 Dock = DockStyle.Fill,
                 Orientation = Orientation.Vertical,
-                SplitterDistance = Math.Max((int)(ClientSize.Width * 0.25), 250),
-                Panel1MinSize = 250,
                 SplitterWidth = 4
             };
 
@@ -203,21 +217,21 @@ namespace UniversalCodePatcher.Forms
                 ShowLines = true,
                 Font = new Font("Segoe UI", 9F)
             };
-            mainSplit.Panel1.Controls.Add(projectTree);
-            mainSplit.Panel1.Controls.Add(projectFilesLabel);
-            mainSplit.Panel1.Controls.SetChildIndex(projectFilesLabel, 0);
+            mainSplitter.Panel1.Controls.Add(projectTree);
+            mainSplitter.Panel1.Controls.Add(projectFilesLabel);
+            mainSplitter.Panel1.Controls.SetChildIndex(projectFilesLabel, 0);
 
             rightSplit = new SplitContainer
             {
                 Dock = DockStyle.Fill,
                 Orientation = Orientation.Horizontal,
-                SplitterDistance = (int)(ClientSize.Height * 0.7)
+                SplitterWidth = 4
             };
 
             tabControl = new TabControl { Dock = DockStyle.Fill };
-            sourceTab = new TabPage("Source");
-            previewTab = new TabPage("Preview");
-            rulesTab = new TabPage("Rules");
+            sourceTab = new TabPage("Source Code");
+            previewTab = new TabPage("Preview Changes");
+            rulesTab = new TabPage("Patch Rules");
             sourceBox = new CodeEditor { Dock = DockStyle.Fill, ReadOnly = false, Font = new Font("Consolas", 9F) };
             previewBox = new CodeEditor { Dock = DockStyle.Fill, ReadOnly = true, Font = new Font("Consolas", 9F) };
             rulesGrid = new DataGridView { Dock = DockStyle.Fill };
@@ -260,8 +274,8 @@ namespace UniversalCodePatcher.Forms
             bottomPanel.Controls.Add(buttonTable);
             rightSplit.Panel2.Controls.Add(bottomPanel);
 
-            mainSplit.Panel2.Controls.Add(rightSplit);
-            Controls.Add(mainSplit);
+            mainSplitter.Panel2.Controls.Add(rightSplit);
+            Controls.Add(mainSplitter);
         }
 
         private void WireEvents()
@@ -727,18 +741,44 @@ namespace UniversalCodePatcher.Forms
             }
         }
 
+        private void SetInitialSplitterPosition()
+        {
+            if (mainSplitter == null || mainSplitter.Width <= 0)
+                return;
+
+            int min = mainSplitter.Panel1MinSize;
+            int max = mainSplitter.Width - mainSplitter.Panel2MinSize;
+            int target = Math.Max(min, (int)(mainSplitter.Width * 0.25));
+            mainSplitter.SplitterDistance = Math.Max(min, Math.Min(max, target));
+
+            if (rightSplit != null)
+            {
+                int height = mainSplitter.Panel2.ClientSize.Height;
+                int rmin = rightSplit.Panel1MinSize;
+                int rmax = height - rightSplit.Panel2MinSize;
+                int rtarget = (int)(height * 0.7);
+                rightSplit.SplitterDistance = Math.Max(rmin, Math.Min(rmax, rtarget));
+            }
+        }
+
         protected override void OnResize(EventArgs e)
         {
             base.OnResize(e);
-            if (mainSplit != null)
+            if (mainSplitter != null && mainSplitter.Width > 0)
             {
-                mainSplit.SplitterDistance = Math.Max(mainSplit.Panel1MinSize,
-                    (int)(ClientSize.Width * 0.25));
+                int min = mainSplitter.Panel1MinSize;
+                int max = mainSplitter.Width - mainSplitter.Panel2MinSize;
+                int target = (int)(mainSplitter.Width * 0.25);
+                mainSplitter.SplitterDistance = Math.Max(min, Math.Min(max, target));
             }
-            if (rightSplit != null)
+
+            if (rightSplit != null && mainSplitter != null && mainSplitter.Panel2.Width > 0)
             {
-                rightSplit.SplitterDistance = Math.Max(100,
-                    (int)(mainSplit.Panel2.ClientSize.Height * 0.7));
+                int height = mainSplitter.Panel2.ClientSize.Height;
+                int min = rightSplit.Panel1MinSize;
+                int max = height - rightSplit.Panel2MinSize;
+                int target = (int)(height * 0.7);
+                rightSplit.SplitterDistance = Math.Max(min, Math.Min(max, target));
             }
         }
 
