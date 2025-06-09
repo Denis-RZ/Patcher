@@ -189,8 +189,9 @@ namespace UniversalCodePatcher.Forms
             {
                 Dock = DockStyle.Fill,
                 Orientation = Orientation.Vertical,
-                SplitterDistance = (int)(ClientSize.Width * 0.25),
-                Panel1MinSize = 200
+                SplitterDistance = Math.Max((int)(ClientSize.Width * 0.25), 250),
+                Panel1MinSize = 250,
+                SplitterWidth = 4
             };
 
             projectFilesLabel = new Label { Text = "Project Files", Dock = DockStyle.Top, Height = 20 };
@@ -214,9 +215,9 @@ namespace UniversalCodePatcher.Forms
             };
 
             tabControl = new TabControl { Dock = DockStyle.Fill };
-            sourceTab = new TabPage("Source Code");
-            previewTab = new TabPage("Preview Changes");
-            rulesTab = new TabPage("Patch Rules");
+            sourceTab = new TabPage("Source");
+            previewTab = new TabPage("Preview");
+            rulesTab = new TabPage("Rules");
             sourceBox = new CodeEditor { Dock = DockStyle.Fill, ReadOnly = false, Font = new Font("Consolas", 9F) };
             previewBox = new CodeEditor { Dock = DockStyle.Fill, ReadOnly = true, Font = new Font("Consolas", 9F) };
             rulesGrid = new DataGridView { Dock = DockStyle.Fill };
@@ -226,12 +227,12 @@ namespace UniversalCodePatcher.Forms
             tabControl.TabPages.AddRange(new[] { sourceTab, previewTab, rulesTab });
             rightSplit.Panel1.Controls.Add(tabControl);
 
-            resultsGroup = new GroupBox { Text = "Patch Results", Dock = DockStyle.Fill };
+            resultsGroup = new GroupBox { Text = "Patch Results", Dock = DockStyle.Fill, Padding = new Padding(16) };
             resultsList = new ListView { Dock = DockStyle.Fill, View = View.Details, FullRowSelect = true };
             resultsGroup.Controls.Add(resultsList);
             rightSplit.Panel2.Controls.Add(resultsGroup);
 
-            var bottomPanel = new Panel { Dock = DockStyle.Bottom, Height = 40 };
+            var bottomPanel = new Panel { Dock = DockStyle.Bottom, Height = 50, Padding = new Padding(0, 0, 16, 16) };
             buttonTable = new TableLayoutPanel
             {
                 Anchor = AnchorStyles.Bottom | AnchorStyles.Right,
@@ -246,12 +247,12 @@ namespace UniversalCodePatcher.Forms
             applyButton = new ModernButton
             {
                 Text = "Apply",
-                Size = new Size(90, 23),
+                Size = new Size(100, 30),
                 Margin = new Padding(3),
                 AccentColor = ColorTranslator.FromHtml("#0078d4")
             };
-            previewButton = new ModernButton { Text = "Preview", Size = new Size(75, 23), Margin = new Padding(3) };
-            cancelButton = new ModernButton { Text = "Cancel", Size = new Size(75, 23), Margin = new Padding(3) };
+            previewButton = new ModernButton { Text = "Preview", Size = new Size(80, 30), Margin = new Padding(3) };
+            cancelButton = new ModernButton { Text = "Cancel", Size = new Size(80, 30), Margin = new Padding(3) };
             buttonTable.Controls.Add(applyButton, 0, 0);
             buttonTable.Controls.Add(previewButton, 1, 0);
             buttonTable.Controls.Add(cancelButton, 2, 0);
@@ -432,7 +433,7 @@ namespace UniversalCodePatcher.Forms
                 projectTree.BeginUpdate();
                 projectTree.Nodes.Clear();
                 var rootDir = new System.IO.DirectoryInfo(path);
-                var rootNode = new TreeNode(rootDir.Name) { Tag = rootDir.FullName };
+                var rootNode = new TreeNode(rootDir.FullName) { Tag = rootDir.FullName };
                 await Task.Run(() => AddDirectoryNodes(rootDir, rootNode));
                 projectTree.Nodes.Add(rootNode);
                 rootNode.Expand();
@@ -454,7 +455,7 @@ namespace UniversalCodePatcher.Forms
             {
                 if (!showHiddenFiles && (sub.Attributes & FileAttributes.Hidden) != 0)
                     continue;
-                var node = parent.Nodes.Add(sub.Name);
+                var node = parent.Nodes.Add(sub.FullName);
                 node.Tag = sub.FullName;
                 AddDirectoryNodes(sub, node);
             }
@@ -462,7 +463,7 @@ namespace UniversalCodePatcher.Forms
             {
                 if (!showHiddenFiles && (file.Attributes & FileAttributes.Hidden) != 0)
                     continue;
-                var node = parent.Nodes.Add(file.Name);
+                var node = parent.Nodes.Add(file.FullName);
                 node.Tag = file.FullName;
             }
         }
