@@ -63,6 +63,7 @@ namespace UniversalCodePatcher.Forms
             InitializeComponent();
             InitializeBusinessLogic();
             LoadRecentProjects();
+            // Configure sizes only after the form has valid bounds
  
             Load += (_, __) =>
             {
@@ -178,6 +179,10 @@ namespace UniversalCodePatcher.Forms
             MainMenuStrip = menuStrip;
         }
 
+            // Split containers start with minimal settings.
+            // Minimum sizes are applied during the Load event once the form has valid dimensions.
+            // Configure the right-side split container after the form loads
+            // to avoid early bounds issues.
         private void CreateToolStrip()
         {
             toolStrip = new ToolStrip { Dock = DockStyle.Top, ImageScalingSize = new Size(16, 16), Height = 25 };
