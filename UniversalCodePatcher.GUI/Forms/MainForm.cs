@@ -63,7 +63,26 @@ namespace UniversalCodePatcher.Forms
             InitializeComponent();
             InitializeBusinessLogic();
             LoadRecentProjects();
-            Load += (_, __) => SetInitialSplitterPosition();
+ 
+            Load += (_, __) =>
+            {
+                if (mainSplitter != null)
+                {
+                    mainSplitter.Panel1MinSize = 200;
+                    mainSplitter.Panel2MinSize = 300;
+                }
+
+                if (rightSplit != null)
+                {
+                    rightSplit.Panel1MinSize = 100;
+                    rightSplit.Panel2MinSize = 100;
+                }
+
+                SetInitialSplitterPosition();
+            };
+ 
+            //Load += (_, __) => SetInitialSplitterPosition();
+ 
         }
 
         private void InitializeBusinessLogic()
@@ -190,8 +209,10 @@ namespace UniversalCodePatcher.Forms
             {
                 Dock = DockStyle.Fill,
                 Orientation = Orientation.Vertical,
+ 
                 Panel1MinSize = 200,
                 Panel2MinSize = 300,
+ 
                 SplitterWidth = 4
             };
 
@@ -212,8 +233,10 @@ namespace UniversalCodePatcher.Forms
             {
                 Dock = DockStyle.Fill,
                 Orientation = Orientation.Horizontal,
+ 
                 Panel1MinSize = 100,
                 Panel2MinSize = 100,
+ 
                 SplitterWidth = 4
             };
 
