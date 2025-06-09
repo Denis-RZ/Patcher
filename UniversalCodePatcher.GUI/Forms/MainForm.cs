@@ -63,9 +63,11 @@ namespace UniversalCodePatcher.Forms
             InitializeComponent();
             InitializeBusinessLogic();
             LoadRecentProjects();
-            // Configure splitter sizes only after the form has valid bounds
+
+            // Configure sizes only after the form has valid bounds
             Load += (_, __) =>
             {
+                // Set minimum sizes only after form is loaded
                 if (mainSplitter != null)
                 {
                     mainSplitter.Panel1MinSize = 200;
@@ -128,6 +130,7 @@ namespace UniversalCodePatcher.Forms
             WireEvents();
             ConfigureDataViews();
         }
+
         private void CreateMenuStrip()
         {
             menuStrip = new MenuStrip();
@@ -202,15 +205,16 @@ namespace UniversalCodePatcher.Forms
 
         private void CreateMainLayout()
         {
-            // Split containers start with minimal settings.
-            // Minimum sizes are applied during the Load event once the form has valid dimensions.
+            // Create main splitter WITHOUT any MinSize properties
             mainSplitter = new SplitContainer
             {
                 Dock = DockStyle.Fill,
                 Orientation = Orientation.Vertical,
                 SplitterWidth = 4
+                // NO Panel1MinSize or Panel2MinSize here!
             };
 
+            // Left panel - Project tree
             projectFilesLabel = new Label { Text = "Project Files", Dock = DockStyle.Top, Height = 20 };
             projectTree = new TreeView
             {
@@ -224,17 +228,16 @@ namespace UniversalCodePatcher.Forms
             mainSplitter.Panel1.Controls.Add(projectFilesLabel);
             mainSplitter.Panel1.Controls.SetChildIndex(projectFilesLabel, 0);
 
-            // Configure the right-side split container after the form loads
-            // to avoid early bounds issues.
+            // Right panel - Create right splitter WITHOUT any MinSize properties
             rightSplit = new SplitContainer
             {
                 Dock = DockStyle.Fill,
                 Orientation = Orientation.Horizontal,
                 SplitterWidth = 4
+                // NO Panel1MinSize or Panel2MinSize here!
             };
 
-            // Central area hosts editors and rule grid in a tab control
-            // so it can expand and collapse safely with the splitter.
+            // Top part of right panel - TabControl with editors
             tabControl = new TabControl { Dock = DockStyle.Fill };
             sourceTab = new TabPage("Source Code");
             previewTab = new TabPage("Preview Changes");
@@ -248,11 +251,12 @@ namespace UniversalCodePatcher.Forms
             tabControl.TabPages.AddRange(new[] { sourceTab, previewTab, rulesTab });
             rightSplit.Panel1.Controls.Add(tabControl);
 
+            // Bottom part of right panel - Results and buttons
             resultsGroup = new GroupBox { Text = "Patch Results", Dock = DockStyle.Fill, Padding = new Padding(16) };
             resultsList = new ListView { Dock = DockStyle.Fill, View = View.Details, FullRowSelect = true };
             resultsGroup.Controls.Add(resultsList);
-            rightSplit.Panel2.Controls.Add(resultsGroup);
 
+            // Create button panel
             var bottomPanel = new Panel { Dock = DockStyle.Bottom, Height = 50, Padding = new Padding(0, 0, 16, 16) };
             buttonTable = new TableLayoutPanel
             {
@@ -279,6 +283,7 @@ namespace UniversalCodePatcher.Forms
             buttonTable.Controls.Add(cancelButton, 2, 0);
 
             bottomPanel.Controls.Add(buttonTable);
+            rightSplit.Panel2.Controls.Add(resultsGroup);
             rightSplit.Panel2.Controls.Add(bottomPanel);
 
             mainSplitter.Panel2.Controls.Add(rightSplit);
@@ -436,6 +441,7 @@ namespace UniversalCodePatcher.Forms
             folder.Nodes.Add("Class2.cs");
             root.ExpandAll();
         }
+
         private void OnOpenProject(object? sender, EventArgs e)
         {
             using var dlg = new FolderBrowserDialog();
@@ -454,7 +460,7 @@ namespace UniversalCodePatcher.Forms
                 projectTree.BeginUpdate();
                 projectTree.Nodes.Clear();
                 var rootDir = new System.IO.DirectoryInfo(path);
-                var rootNode = new TreeNode(rootDir.FullName) { Tag = rootDir.FullName };
+                var rootNode = new TreeNode(rootDir.Name) { Tag = rootDir.FullName };
                 await Task.Run(() => AddDirectoryNodes(rootDir, rootNode));
                 projectTree.Nodes.Add(rootNode);
                 rootNode.Expand();
@@ -476,7 +482,7 @@ namespace UniversalCodePatcher.Forms
             {
                 if (!showHiddenFiles && (sub.Attributes & FileAttributes.Hidden) != 0)
                     continue;
-                var node = parent.Nodes.Add(sub.FullName);
+                var node = parent.Nodes.Add(sub.Name);
                 node.Tag = sub.FullName;
                 AddDirectoryNodes(sub, node);
             }
@@ -484,7 +490,7 @@ namespace UniversalCodePatcher.Forms
             {
                 if (!showHiddenFiles && (file.Attributes & FileAttributes.Hidden) != 0)
                     continue;
-                var node = parent.Nodes.Add(file.FullName);
+                var node = parent.Nodes.Add(file.Name);
                 node.Tag = file.FullName;
             }
         }
@@ -771,23 +777,30 @@ namespace UniversalCodePatcher.Forms
         protected override void OnResize(EventArgs e)
         {
             base.OnResize(e);
+            
+            // Safe resize with bounds checking
             if (mainSplitter != null && mainSplitter.Width > 0)
             {
                 int min = mainSplitter.Panel1MinSize;
                 int max = mainSplitter.Width - mainSplitter.Panel2MinSize;
-                int target = (int)(mainSplitter.Width * 0.25);
-                mainSplitter.SplitterDistance = Math.Max(min, Math.Min(max, target));
+                if (max > min) // Only set if valid range exists
+                {
+                    int target = (int)(mainSplitter.Width * 0.25);
+                    mainSplitter.SplitterDistance = Math.Max(min, Math.Min(max, target));
+                }
             }
 
-            if (rightSplit != null && mainSplitter != null && mainSplitter.Panel2.Width > 0)
+            if (rightSplit != null && mainSplitter != null && mainSplitter.Panel2.Height > 0)
             {
                 int height = mainSplitter.Panel2.ClientSize.Height;
                 int min = rightSplit.Panel1MinSize;
                 int max = height - rightSplit.Panel2MinSize;
-                int target = (int)(height * 0.7);
-                rightSplit.SplitterDistance = Math.Max(min, Math.Min(max, target));
+                if (max > min) // Only set if valid range exists
+                {
+                    int target = (int)(height * 0.7);
+                    rightSplit.SplitterDistance = Math.Max(min, Math.Min(max, target));
+                }
             }
         }
-
     }
 }
