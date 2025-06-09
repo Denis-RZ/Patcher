@@ -24,7 +24,7 @@ namespace UniversalCodePatcher.Forms
         private StatusStrip statusStrip = null!;
         private SplitContainer mainSplitter = null!;
         private SplitContainer rightSplit = null!;
-        private TableLayoutPanel buttonTable = null!;
+        private Panel buttonPanel = null!;
         private Label projectFilesLabel = null!;
         private TreeView projectTree = null!;
         private TabControl tabControl = null!;
@@ -64,24 +64,29 @@ namespace UniversalCodePatcher.Forms
             InitializeBusinessLogic();
             LoadRecentProjects();
 
-            // Configure sizes only after the form has valid bounds
+            // Configure sizes after the form has valid bounds
             Load += (_, __) =>
             {
-                // Set minimum sizes only after form is loaded
-                if (mainSplitter != null)
+                // Более надежная последовательность инициализации
+                BeginInvoke(new Action(() =>
                 {
-                    mainSplitter.Panel1MinSize = 200;
-                    mainSplitter.Panel2MinSize = 300;
-                }
+                    SetInitialSplitterPositions();
 
-                if (rightSplit != null)
-                {
-                    rightSplit.Panel1MinSize = 100;
-                    rightSplit.Panel2MinSize = 100;
-                }
+                    // Дополнительная проверка TabControl
+                    if (tabControl != null && tabControl.Parent != null)
+                    {
+                        tabControl.Invalidate();
+                        tabControl.Update();
 
-                SetInitialSplitterPosition();
+                        // Убедимся что выбрана первая вкладка
+                        if (tabControl.TabPages.Count > 0)
+                            tabControl.SelectedTab = tabControl.TabPages[0];
+                    }
+                }));
             };
+
+            // Handle form resizing more smoothly
+            ResizeEnd += (_, __) => SetSplitterPositions();
         }
 
         private void InitializeBusinessLogic()
@@ -112,16 +117,17 @@ namespace UniversalCodePatcher.Forms
         {
             SuspendLayout();
 
-            ClientSize = new Size(1024, 768);
-            MinimumSize = new Size(800, 600);
+            ClientSize = new Size(1200, 800);
+            MinimumSize = new Size(900, 650);
             WindowState = FormWindowState.Maximized;
             StartPosition = FormStartPosition.CenterScreen;
             Text = "Universal Code Patcher";
+            BackColor = SystemColors.Control;
 
-            CreateMenuStrip();
-            CreateToolStrip();
-            CreateStatusBar();
-            CreateMainLayout();
+            // ВАЖНО: Правильный порядок создания и добавления контролов
+            CreateMenuStrip();      // Создаем меню
+            CreateStatusBar();      // Создаем статус бар
+            CreateMainLayout();     // Создаем основной layout ПОСЛЕДНИМ
 
             ResumeLayout(false);
             PerformLayout();
@@ -141,6 +147,7 @@ namespace UniversalCodePatcher.Forms
             fileMenu.DropDownItems.Add("Recent");
             fileMenu.DropDownItems.Add(new ToolStripSeparator());
             fileMenu.DropDownItems.Add("Exit", null, (s, e) => Close());
+            
             var editMenu = new ToolStripMenuItem("Edit");
             editMenu.DropDownItems.AddRange(new ToolStripItem[]
             {
@@ -152,6 +159,7 @@ namespace UniversalCodePatcher.Forms
                 new ToolStripMenuItem("Paste"),
                 new ToolStripMenuItem("Find")
             });
+            
             var viewMenu = new ToolStripMenuItem("View");
             viewMenu.DropDownItems.AddRange(new ToolStripItem[]
             {
@@ -159,6 +167,7 @@ namespace UniversalCodePatcher.Forms
                 new ToolStripMenuItem("Show All Files"),
                 new ToolStripMenuItem("Expand Tree")
             });
+            
             var toolsMenu = new ToolStripMenuItem("Tools");
             toolsMenu.DropDownItems.AddRange(new ToolStripItem[]
             {
@@ -166,130 +175,395 @@ namespace UniversalCodePatcher.Forms
                 new ToolStripMenuItem("Backup Manager"),
                 new ToolStripMenuItem("Module Settings")
             });
+            
             var helpMenu = new ToolStripMenuItem("Help");
             helpMenu.DropDownItems.AddRange(new ToolStripItem[]
             {
                 new ToolStripMenuItem("Documentation"),
                 new ToolStripMenuItem("About")
             });
+            
             menuStrip.Items.AddRange(new[] { fileMenu, editMenu, viewMenu, toolsMenu, helpMenu });
             menuStrip.Dock = DockStyle.Top;
+            
+            // Добавляем MenuStrip ПЕРВЫМ
             Controls.Add(menuStrip);
             MainMenuStrip = menuStrip;
         }
 
         private void CreateToolStrip()
         {
-            toolStrip = new ToolStrip { Dock = DockStyle.Top, ImageScalingSize = new Size(16, 16), Height = 25 };
-            toolStrip.Items.Add(new ToolStripButton { Image = SystemIcons.Application.ToBitmap(), ToolTipText = "New" });
-            toolStrip.Items.Add(new ToolStripButton { Image = SystemIcons.Application.ToBitmap(), ToolTipText = "Open" });
-            toolStrip.Items.Add(new ToolStripButton { Image = SystemIcons.Application.ToBitmap(), ToolTipText = "Save" });
+            toolStrip = new ToolStrip
+            {
+                Dock = DockStyle.Top,
+                ImageScalingSize = new Size(16, 16),
+                Height = 28,
+                Padding = new Padding(4, 2, 4, 2)
+            };
+            
+            // Упрощаем создание кнопок без изображений для избежания проблем
+            toolStrip.Items.Add(new ToolStripButton { Text = "New", ToolTipText = "New Project" });
+            toolStrip.Items.Add(new ToolStripButton { Text = "Open", ToolTipText = "Open Project" });
+            toolStrip.Items.Add(new ToolStripButton { Text = "Save", ToolTipText = "Save Project" });
             toolStrip.Items.Add(new ToolStripSeparator());
-            toolStrip.Items.Add(new ToolStripButton { Image = SystemIcons.Application.ToBitmap(), ToolTipText = "Patch" });
-            toolStrip.Items.Add(new ToolStripButton { Image = SystemIcons.Application.ToBitmap(), ToolTipText = "Preview" });
-            toolStrip.Items.Add(new ToolStripButton { Image = SystemIcons.Application.ToBitmap(), ToolTipText = "Undo" });
-            toolStrip.Items.Add(new ToolStripButton { Image = SystemIcons.Application.ToBitmap(), ToolTipText = "Redo" });
+            toolStrip.Items.Add(new ToolStripButton { Text = "Patch", ToolTipText = "Apply Patches" });
+            toolStrip.Items.Add(new ToolStripButton { Text = "Preview", ToolTipText = "Preview Changes" });
+            toolStrip.Items.Add(new ToolStripButton { Text = "Undo", ToolTipText = "Undo" });
+            toolStrip.Items.Add(new ToolStripButton { Text = "Redo", ToolTipText = "Redo" });
+            
+            // Добавляем ToolStrip ВТОРЫМ
             Controls.Add(toolStrip);
         }
 
         private void CreateStatusBar()
         {
             statusStrip = new StatusStrip();
-            statusLabel = new ToolStripStatusLabel("Ready");
-            progressBar = new ToolStripProgressBar { Visible = false, AutoSize = false, Size = new Size(200, 16) };
-            infoLabel = new ToolStripStatusLabel("Files: 0 | Modified: 0");
+            statusLabel = new ToolStripStatusLabel("Ready") { Spring = true, TextAlign = ContentAlignment.MiddleLeft };
+            progressBar = new ToolStripProgressBar { Visible = false, AutoSize = false, Size = new Size(200, 18) };
+            infoLabel = new ToolStripStatusLabel("Files: 0 | Modified: 0") { AutoSize = true };
             statusStrip.Items.AddRange(new ToolStripItem[] { statusLabel, progressBar, infoLabel });
             statusStrip.Dock = DockStyle.Bottom;
+            
+            // Добавляем StatusStrip ТРЕТЬИМ
             Controls.Add(statusStrip);
         }
 
         private void CreateMainLayout()
         {
-            // Create main splitter WITHOUT any MinSize properties
+            // Создаем основной splitter БЕЗ установки минимальных размеров
             mainSplitter = new SplitContainer
             {
-                Dock = DockStyle.Fill,
+                Dock = DockStyle.Fill,  // Заполнит оставшееся место после MenuStrip, ToolStrip и StatusStrip
                 Orientation = Orientation.Vertical,
-                SplitterWidth = 4
-                // NO Panel1MinSize or Panel2MinSize here!
+                SplitterWidth = 5,
+                FixedPanel = FixedPanel.Panel1
             };
 
             // Left panel - Project tree
-            projectFilesLabel = new Label { Text = "Project Files", Dock = DockStyle.Top, Height = 20 };
+            projectFilesLabel = new Label
+            {
+                Text = "Project Files",
+                Dock = DockStyle.Top,
+                Height = 24,
+                Padding = new Padding(8, 4, 8, 4),
+                BackColor = SystemColors.ControlLight,
+                Font = new Font("Segoe UI", 9F, FontStyle.Bold)
+            };
+
             projectTree = new TreeView
             {
                 Dock = DockStyle.Fill,
                 CheckBoxes = true,
                 HideSelection = false,
                 ShowLines = true,
-                Font = new Font("Segoe UI", 9F)
+                Font = new Font("Segoe UI", 9F),
+                Indent = 20,
+                ItemHeight = 20,
+                Margin = new Padding(4)
             };
+
             mainSplitter.Panel1.Controls.Add(projectTree);
             mainSplitter.Panel1.Controls.Add(projectFilesLabel);
             mainSplitter.Panel1.Controls.SetChildIndex(projectFilesLabel, 0);
 
-            // Right panel - Create right splitter WITHOUT any MinSize properties
+            // Right panel - Создаем правый splitter БЕЗ минимальных размеров
             rightSplit = new SplitContainer
             {
                 Dock = DockStyle.Fill,
                 Orientation = Orientation.Horizontal,
-                SplitterWidth = 4
-                // NO Panel1MinSize or Panel2MinSize here!
+                SplitterWidth = 5,
+                FixedPanel = FixedPanel.Panel2,
+                BackColor = SystemColors.Control
             };
 
-            // Top part of right panel - TabControl with editors
-            tabControl = new TabControl { Dock = DockStyle.Fill };
-            sourceTab = new TabPage("Source Code");
-            previewTab = new TabPage("Preview Changes");
-            rulesTab = new TabPage("Patch Rules");
-            sourceBox = new CodeEditor { Dock = DockStyle.Fill, ReadOnly = false, Font = new Font("Consolas", 9F) };
-            previewBox = new CodeEditor { Dock = DockStyle.Fill, ReadOnly = true, Font = new Font("Consolas", 9F) };
-            rulesGrid = new DataGridView { Dock = DockStyle.Fill };
-            sourceTab.Controls.Add(sourceBox);
-            previewTab.Controls.Add(previewBox);
-            rulesTab.Controls.Add(rulesGrid);
-            tabControl.TabPages.AddRange(new[] { sourceTab, previewTab, rulesTab });
-            rightSplit.Panel1.Controls.Add(tabControl);
-
-            // Bottom part of right panel - Results and buttons
-            resultsGroup = new GroupBox { Text = "Patch Results", Dock = DockStyle.Fill, Padding = new Padding(16) };
-            resultsList = new ListView { Dock = DockStyle.Fill, View = View.Details, FullRowSelect = true };
-            resultsGroup.Controls.Add(resultsList);
-
-            // Create button panel
-            var bottomPanel = new Panel { Dock = DockStyle.Bottom, Height = 50, Padding = new Padding(0, 0, 16, 16) };
-            buttonTable = new TableLayoutPanel
-            {
-                Anchor = AnchorStyles.Bottom | AnchorStyles.Right,
-                AutoSize = true,
-                ColumnCount = 3,
-                RowCount = 1
-            };
-            buttonTable.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-            buttonTable.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-            buttonTable.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-
-            applyButton = new ModernButton
-            {
-                Text = "Apply",
-                Size = new Size(100, 30),
-                Margin = new Padding(3),
-                AccentColor = ColorTranslator.FromHtml("#0078d4")
-            };
-            previewButton = new ModernButton { Text = "Preview", Size = new Size(80, 30), Margin = new Padding(3) };
-            cancelButton = new ModernButton { Text = "Cancel", Size = new Size(80, 30), Margin = new Padding(3) };
-            buttonTable.Controls.Add(applyButton, 0, 0);
-            buttonTable.Controls.Add(previewButton, 1, 0);
-            buttonTable.Controls.Add(cancelButton, 2, 0);
-
-            bottomPanel.Controls.Add(buttonTable);
-            rightSplit.Panel2.Controls.Add(resultsGroup);
-            rightSplit.Panel2.Controls.Add(bottomPanel);
+            CreateTopPanel();
+            CreateBottomPanel();
 
             mainSplitter.Panel2.Controls.Add(rightSplit);
+            
+            // ВАЖНО: Добавляем основной splitter ПОСЛЕДНИМ
             Controls.Add(mainSplitter);
         }
 
+        private void CreateTopPanel()
+        {
+            // Top part of right panel - TabControl with editors
+            tabControl = new TabControl
+            {
+                Dock = DockStyle.Fill,
+                Font = new Font("Segoe UI", 9F),
+                Padding = new Point(8, 4),
+                Visible = true  // Явно делаем видимым
+            };
+
+            // Create tab pages
+            sourceTab = new TabPage("Source Code") 
+            { 
+                UseVisualStyleBackColor = true,
+                BackColor = Color.White
+            };
+            previewTab = new TabPage("Preview Changes") 
+            { 
+                UseVisualStyleBackColor = true,
+                BackColor = Color.White
+            };
+            rulesTab = new TabPage("Patch Rules") 
+            { 
+                UseVisualStyleBackColor = true,
+                BackColor = Color.White
+            };
+
+            // Create editors and grid - используем RichTextBox если CodeEditor недоступен
+            try
+            {
+                sourceBox = new CodeEditor
+                {
+                    Dock = DockStyle.Fill,
+                    ReadOnly = false,
+                    Font = new Font("Consolas", 10F),
+                    Text = "// Source code will appear here...",
+                    BackColor = Color.White
+                };
+            }
+            catch
+            {
+                // Fallback to RichTextBox if CodeEditor is not available
+                sourceBox = new RichTextBox
+                {
+                    Dock = DockStyle.Fill,
+                    ReadOnly = false,
+                    Font = new Font("Consolas", 10F),
+                    Text = "// Source code will appear here...",
+                    BackColor = Color.White
+                } as CodeEditor;
+            }
+
+            try
+            {
+                previewBox = new CodeEditor
+                {
+                    Dock = DockStyle.Fill,
+                    ReadOnly = true,
+                    Font = new Font("Consolas", 10F),
+                    Text = "// Preview will appear here...",
+                    BackColor = Color.FromArgb(248, 248, 248)
+                };
+            }
+            catch
+            {
+                // Fallback to RichTextBox if CodeEditor is not available
+                previewBox = new RichTextBox
+                {
+                    Dock = DockStyle.Fill,
+                    ReadOnly = true,
+                    Font = new Font("Consolas", 10F),
+                    Text = "// Preview will appear here...",
+                    BackColor = Color.FromArgb(248, 248, 248)
+                } as CodeEditor;
+            }
+
+            rulesGrid = new DataGridView
+            {
+                Dock = DockStyle.Fill,
+                AllowUserToAddRows = true,
+                AllowUserToDeleteRows = true,
+                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
+                ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize,
+                Margin = new Padding(4),
+                BackgroundColor = Color.White
+            };
+
+            // Add controls to tab pages
+            sourceTab.Controls.Add(sourceBox);
+            previewTab.Controls.Add(previewBox);
+            rulesTab.Controls.Add(rulesGrid);
+
+            // Add tab pages to tab control
+            tabControl.TabPages.Add(sourceTab);
+            tabControl.TabPages.Add(previewTab);
+            tabControl.TabPages.Add(rulesTab);
+
+            // Set default selected tab
+            tabControl.SelectedIndex = 0;
+
+            // ВАЖНО: Убедимся что rightSplit.Panel1 готов принять TabControl
+            rightSplit.Panel1.Controls.Clear(); // Очищаем перед добавлением
+            rightSplit.Panel1.Controls.Add(tabControl);
+            
+            // Принудительно обновляем
+            tabControl.Refresh();
+            rightSplit.Panel1.Refresh();
+        }
+
+        private void CreateBottomPanel()
+        {
+            // Create button panel FIRST - it will be at the bottom of results group
+            buttonPanel = new Panel
+            {
+                Dock = DockStyle.Bottom,
+                Height = 50,
+                Padding = new Padding(8, 8, 8, 8),
+                BackColor = SystemColors.Control
+            };
+
+            // Create buttons with consistent styling
+            applyButton = new ModernButton
+            {
+                Text = "Apply Patches",
+                Size = new Size(120, 32),
+                Anchor = AnchorStyles.Bottom | AnchorStyles.Right,
+                AccentColor = ColorTranslator.FromHtml("#0078d4"),
+                Font = new Font("Segoe UI", 9F)
+            };
+
+            previewButton = new ModernButton
+            {
+                Text = "Preview",
+                Size = new Size(90, 32),
+                Anchor = AnchorStyles.Bottom | AnchorStyles.Right,
+                Font = new Font("Segoe UI", 9F)
+            };
+
+            cancelButton = new ModernButton
+            {
+                Text = "Cancel",
+                Size = new Size(80, 32),
+                Anchor = AnchorStyles.Bottom | AnchorStyles.Right,
+                Font = new Font("Segoe UI", 9F)
+            };
+
+            // Add buttons to button panel
+            buttonPanel.Controls.Add(applyButton);
+            buttonPanel.Controls.Add(previewButton);
+            buttonPanel.Controls.Add(cancelButton);
+
+            // Handle panel resize to keep buttons positioned correctly
+            buttonPanel.Resize += (s, e) =>
+            {
+                var panel = s as Panel;
+                if (panel == null) return;
+
+                cancelButton.Location = new Point(panel.Width - cancelButton.Width - 12,
+                                                (panel.Height - cancelButton.Height) / 2);
+                previewButton.Location = new Point(cancelButton.Left - previewButton.Width - 8,
+                                                 cancelButton.Top);
+                applyButton.Location = new Point(previewButton.Left - applyButton.Width - 8,
+                                               cancelButton.Top);
+            };
+
+            // Create results list
+            resultsList = new ListView
+            {
+                Dock = DockStyle.Fill,
+                View = View.Details,
+                FullRowSelect = true,
+                GridLines = true,
+                Font = new Font("Segoe UI", 9F)
+            };
+
+            // Create results group
+            resultsGroup = new GroupBox
+            {
+                Text = "Patch Results",
+                Dock = DockStyle.Fill,
+                Padding = new Padding(8),
+                Font = new Font("Segoe UI", 9F)
+            };
+
+            // Add controls to results group in CORRECT order (buttons FIRST as Dock.Bottom)
+            resultsGroup.Controls.Add(buttonPanel);  // Add button panel FIRST
+            resultsGroup.Controls.Add(resultsList);  // Then results list (will fill remaining space)
+
+            // Add results group to right split panel 2
+            rightSplit.Panel2.Controls.Add(resultsGroup);
+        }
+
+        private void SetInitialSplitterPositions()
+        {
+            // Отложенная установка позиций splitter-ов
+            try
+            {
+                if (mainSplitter?.Width > 0 && mainSplitter.Width > 300)
+                {
+                    // Устанавливаем минимальные размеры только после инициализации
+                    mainSplitter.Panel1MinSize = 200;
+                    mainSplitter.Panel2MinSize = 300;
+
+                    int targetWidth = Math.Max(220, Math.Min(350, (int)(mainSplitter.Width * 0.25)));
+                    int maxDistance = mainSplitter.Width - mainSplitter.Panel2MinSize - mainSplitter.SplitterWidth;
+
+                    if (targetWidth >= mainSplitter.Panel1MinSize && targetWidth <= maxDistance)
+                    {
+                        mainSplitter.SplitterDistance = targetWidth;
+                    }
+                }
+
+                if (rightSplit?.Height > 0 && rightSplit.Height > 200)
+                {
+                    // Устанавливаем минимальные размеры для правого splitter
+                    rightSplit.Panel1MinSize = 150;
+                    rightSplit.Panel2MinSize = 120;
+
+                    // 75% верх (TabControl), 25% низ (результаты)
+                    int targetHeight = Math.Max(200, (int)(rightSplit.Height * 0.75));
+                    int maxDistance = rightSplit.Height - rightSplit.Panel2MinSize - rightSplit.SplitterWidth;
+
+                    if (targetHeight >= rightSplit.Panel1MinSize && targetHeight <= maxDistance)
+                    {
+                        rightSplit.SplitterDistance = targetHeight;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Splitter positioning error: {ex.Message}");
+            }
+        }
+
+        private void SetSplitterPositions()
+        {
+            // Only adjust if window is large enough and not minimized
+            if (WindowState == FormWindowState.Minimized) return;
+
+            try
+            {
+                if (mainSplitter?.Width > 500)
+                {
+                    // Безопасная установка для главного splitter
+                    if (mainSplitter.Panel1MinSize == 0) mainSplitter.Panel1MinSize = 200;
+                    if (mainSplitter.Panel2MinSize == 0) mainSplitter.Panel2MinSize = 300;
+
+                    int targetWidth = Math.Max(220, Math.Min(400, (int)(mainSplitter.Width * 0.25)));
+                    int maxDistance = mainSplitter.Width - mainSplitter.Panel2MinSize - mainSplitter.SplitterWidth;
+
+                    if (targetWidth >= mainSplitter.Panel1MinSize && targetWidth <= maxDistance)
+                    {
+                        mainSplitter.SplitterDistance = targetWidth;
+                    }
+                }
+
+                if (rightSplit?.Height > 300)
+                {
+                    // Безопасная установка для правого splitter
+                    if (rightSplit.Panel1MinSize == 0) rightSplit.Panel1MinSize = 150;
+                    if (rightSplit.Panel2MinSize == 0) rightSplit.Panel2MinSize = 120;
+
+                    int targetHeight = Math.Max(200, (int)(rightSplit.Height * 0.75));
+                    int maxDistance = rightSplit.Height - rightSplit.Panel2MinSize - rightSplit.SplitterWidth;
+
+                    if (targetHeight >= rightSplit.Panel1MinSize && targetHeight <= maxDistance)
+                    {
+                        rightSplit.SplitterDistance = targetHeight;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Splitter resize error: {ex.Message}");
+            }
+        }
+
+        // Все остальные методы остаются без изменений...
         private void WireEvents()
         {
             previewButton.Click += OnPreview;
@@ -421,14 +695,24 @@ namespace UniversalCodePatcher.Forms
 
         private void ConfigureDataViews()
         {
-            rulesGrid.Columns.Add("Rule", "Rule");
-            rulesGrid.Columns.Add("Pattern", "Pattern");
+            // Configure rules grid
+            rulesGrid.Columns.Add("Rule", "Rule Name");
+            rulesGrid.Columns.Add("Pattern", "Search Pattern");
             rulesGrid.Columns.Add("Replacement", "Replacement");
 
-            resultsList.Columns.Add("File", 250);
+            // Make columns fill available space proportionally
+            rulesGrid.Columns[0].FillWeight = 25;
+            rulesGrid.Columns[1].FillWeight = 40;
+            rulesGrid.Columns[2].FillWeight = 35;
+
+            // Add sample data to make it visible
+            rulesGrid.Rows.Add("Example Rule", "old_code", "new_code");
+
+            // Configure results list
+            resultsList.Columns.Add("File", 280);
             resultsList.Columns.Add("Status", 80);
             resultsList.Columns.Add("Changes", 80);
-            resultsList.Columns.Add("Result", 120);
+            resultsList.Columns.Add("Result", 150);
         }
 
         private void LoadSampleTree()
@@ -440,8 +724,34 @@ namespace UniversalCodePatcher.Forms
             folder.Nodes.Add("Class1.cs");
             folder.Nodes.Add("Class2.cs");
             root.ExpandAll();
+
+            // Ensure tab control is visible and properly initialized
+            if (tabControl != null && tabControl.TabPages.Count > 0)
+            {
+                tabControl.SelectedIndex = 0;
+                tabControl.Visible = true;
+                if (sourceBox != null)
+                    sourceBox.Text = "// Select a file from the project tree to edit";
+
+                // Force refresh of TabControl
+                tabControl.Refresh();
+                tabControl.Update();
+            }
         }
 
+        protected override void OnResize(EventArgs e)
+        {
+            base.OnResize(e);
+            // Only adjust splitters when the form is properly sized and not minimized
+            if (WindowState != FormWindowState.Minimized && Width > 0 && Height > 0)
+            {
+                SetSplitterPositions();
+            }
+        }
+
+        // Остальные методы (OnOpenProject, LoadProjectAsync, OnTreeAfterSelect, OnPreview, OnApplyPatches, и т.д.)
+        // остаются без изменений из исходного кода...
+        
         private void OnOpenProject(object? sender, EventArgs e)
         {
             using var dlg = new FolderBrowserDialog();
@@ -751,55 +1061,6 @@ namespace UniversalCodePatcher.Forms
                 var item = new ToolStripMenuItem(p);
                 item.Click += async (s, e) => { projectPath = p; await LoadProjectAsync(p); };
                 recent.DropDownItems.Add(item);
-            }
-        }
-
-        private void SetInitialSplitterPosition()
-        {
-            if (mainSplitter == null || mainSplitter.Width <= 0)
-                return;
-
-            int min = mainSplitter.Panel1MinSize;
-            int max = mainSplitter.Width - mainSplitter.Panel2MinSize;
-            int target = Math.Max(min, (int)(mainSplitter.Width * 0.25));
-            mainSplitter.SplitterDistance = Math.Max(min, Math.Min(max, target));
-
-            if (rightSplit != null)
-            {
-                int height = mainSplitter.Panel2.ClientSize.Height;
-                int rmin = rightSplit.Panel1MinSize;
-                int rmax = height - rightSplit.Panel2MinSize;
-                int rtarget = (int)(height * 0.7);
-                rightSplit.SplitterDistance = Math.Max(rmin, Math.Min(rmax, rtarget));
-            }
-        }
-
-        protected override void OnResize(EventArgs e)
-        {
-            base.OnResize(e);
-            
-            // Safe resize with bounds checking
-            if (mainSplitter != null && mainSplitter.Width > 0)
-            {
-                int min = mainSplitter.Panel1MinSize;
-                int max = mainSplitter.Width - mainSplitter.Panel2MinSize;
-                if (max > min) // Only set if valid range exists
-                {
-                    int target = (int)(mainSplitter.Width * 0.25);
-                    mainSplitter.SplitterDistance = Math.Max(min, Math.Min(max, target));
-                }
-            }
-
-            if (rightSplit != null && mainSplitter != null && mainSplitter.Panel2.Height > 0)
-            {
-                int height = mainSplitter.Panel2.ClientSize.Height;
-                int min = rightSplit.Panel1MinSize;
-                int max = height - rightSplit.Panel2MinSize;
-                if (max > min) // Only set if valid range exists
-                {
-                    int target = (int)(height * 0.7);
-                    rightSplit.SplitterDistance = Math.Max(min, Math.Min(max, target));
-                }
             }
         }
     }
