@@ -35,6 +35,10 @@ namespace UniversalCodePatcher.Forms
             panel.Controls.Add(restoreButton);
             Controls.Add(panel);
 
+            AcceptButton = restoreButton;
+            CancelButton = closeButton;
+            list.DoubleClick += OnRestore;
+
             LoadBackups();
 
             closeButton.Click += (_, __) => Close();
@@ -74,6 +78,8 @@ namespace UniversalCodePatcher.Forms
             if (list.SelectedItems.Count == 0) return;
             var item = list.SelectedItems[0];
             var path = item.Text;
+            if (MessageBox.Show($"Delete backup {Path.GetFileName(path)}?", "Confirm", MessageBoxButtons.OKCancel) != DialogResult.OK)
+                return;
             try
             {
                 File.Delete(path);
