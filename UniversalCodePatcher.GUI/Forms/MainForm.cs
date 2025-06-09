@@ -21,6 +21,7 @@ namespace UniversalCodePatcher.Forms
     public partial class MainForm : Form
     {
         private MenuStrip menuStrip = null!;
+        private ToolStripMenuItem _toolsMenu = null!; // reference to the Tools menu
         private ToolStrip toolStrip = null!;
         private StatusStrip statusStrip = null!;
         private SplitContainer mainSplitter = null!;
@@ -173,8 +174,8 @@ namespace UniversalCodePatcher.Forms
                 new ToolStripMenuItem("Expand Tree")
             });
             
-            var toolsMenu = new ToolStripMenuItem("Tools");
-            toolsMenu.DropDownItems.AddRange(new ToolStripItem[]
+            _toolsMenu = new ToolStripMenuItem("Tools") { Name = "toolsMenu" };
+            _toolsMenu.DropDownItems.AddRange(new ToolStripItem[]
             {
                 new ToolStripMenuItem("Options"),
                 new ToolStripMenuItem("Backup Manager"),
@@ -188,7 +189,7 @@ namespace UniversalCodePatcher.Forms
                 new ToolStripMenuItem("About")
             });
             
-            menuStrip.Items.AddRange(new[] { fileMenu, editMenu, viewMenu, toolsMenu, helpMenu });
+            menuStrip.Items.AddRange(new[] { fileMenu, editMenu, viewMenu, _toolsMenu, helpMenu });
             menuStrip.Dock = DockStyle.Top;
             
             // Добавляем MenuStrip ПЕРВЫМ
@@ -652,7 +653,7 @@ namespace UniversalCodePatcher.Forms
                 viewMenuItem.DropDownItems.Add("Collapse Tree", null, (s, e) => projectTree.CollapseAll());
             }
 
-            var toolsMenuItem = menuStrip.Items[3] as ToolStripMenuItem;
+            var toolsMenuItem = _toolsMenu;
             if (toolsMenuItem != null)
             {
                 foreach (ToolStripItem item in toolsMenuItem.DropDownItems)
