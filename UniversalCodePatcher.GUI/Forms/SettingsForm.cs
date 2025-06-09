@@ -12,10 +12,11 @@ namespace UniversalCodePatcher.Forms
 
         public AppSettings Settings => _settings;
 
-        // Default constructor for designer support
+ 
+ 
         public SettingsForm() : this(new AppSettings()) { }
 
-        // Initializes the form with the provided settings instance
+ 
         public SettingsForm(AppSettings settings)
         {
             _settings = settings;
@@ -67,7 +68,7 @@ namespace UniversalCodePatcher.Forms
             ok.Click += OnOk;
         }
 
-        // Persist user selections back into the settings object
+ 
         private void OnOk(object? sender, System.EventArgs e)
         {
             _settings.ShowHiddenFiles = _showHidden.Checked;
