@@ -34,6 +34,10 @@ namespace UniversalCodePatcher.Forms
             Controls.Add(moduleList);
             LoadModules();
 
+            AcceptButton = unloadButton;
+            CancelButton = closeButton;
+            moduleList.DoubleClick += OnUnload;
+
             closeButton.Click += (_, __) => Close();
             unloadButton.Click += OnUnload;
         }
