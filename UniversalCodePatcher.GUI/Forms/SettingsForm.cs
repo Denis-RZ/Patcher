@@ -12,8 +12,11 @@ namespace UniversalCodePatcher.Forms
 
         public AppSettings Settings => _settings;
 
+ 
+ 
         public SettingsForm() : this(new AppSettings()) { }
 
+ 
         public SettingsForm(AppSettings settings)
         {
             _settings = settings;
@@ -65,6 +68,7 @@ namespace UniversalCodePatcher.Forms
             ok.Click += OnOk;
         }
 
+ 
         private void OnOk(object? sender, System.EventArgs e)
         {
             _settings.ShowHiddenFiles = _showHidden.Checked;
