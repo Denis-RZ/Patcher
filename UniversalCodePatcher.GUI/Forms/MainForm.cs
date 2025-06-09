@@ -22,9 +22,9 @@ namespace UniversalCodePatcher.Forms
         private MenuStrip menuStrip = null!;
         private ToolStrip toolStrip = null!;
         private StatusStrip statusStrip = null!;
-        private ResizablePanel projectPanel = null!;
-        private Panel mainPanel = null!;
-        private SplitContainer horizontalSplit = null!;
+        private SplitContainer mainSplit = null!;
+        private SplitContainer rightSplit = null!;
+        private TableLayoutPanel buttonTable = null!;
         private Label projectFilesLabel = null!;
         private TreeView projectTree = null!;
         private TabControl tabControl = null!;
@@ -36,7 +36,6 @@ namespace UniversalCodePatcher.Forms
         private DataGridView rulesGrid = null!;
         private GroupBox resultsGroup = null!;
         private ListView resultsList = null!;
-        private FlowLayoutPanel actionFlow = null!;
         private ModernButton applyButton = null!;
         private ModernButton previewButton = null!;
         private ModernButton cancelButton = null!;
@@ -186,7 +185,14 @@ namespace UniversalCodePatcher.Forms
 
         private void CreateMainLayout()
         {
-            projectPanel = new ResizablePanel { Dock = DockStyle.Left, WidthPercentage = 0.25, MinimumWidth = 200 };
+            mainSplit = new SplitContainer
+            {
+                Dock = DockStyle.Fill,
+                Orientation = Orientation.Vertical,
+                SplitterDistance = (int)(ClientSize.Width * 0.25),
+                Panel1MinSize = 200
+            };
+
             projectFilesLabel = new Label { Text = "Project Files", Dock = DockStyle.Top, Height = 20 };
             projectTree = new TreeView
             {
@@ -196,12 +202,16 @@ namespace UniversalCodePatcher.Forms
                 ShowLines = true,
                 Font = new Font("Segoe UI", 9F)
             };
-            projectPanel.Controls.Add(projectTree);
-            projectPanel.Controls.Add(projectFilesLabel);
-            projectPanel.Controls.SetChildIndex(projectFilesLabel, 0);
+            mainSplit.Panel1.Controls.Add(projectTree);
+            mainSplit.Panel1.Controls.Add(projectFilesLabel);
+            mainSplit.Panel1.Controls.SetChildIndex(projectFilesLabel, 0);
 
-            mainPanel = new Panel { Dock = DockStyle.Fill };
-            horizontalSplit = new SplitContainer { Dock = DockStyle.Fill, Orientation = Orientation.Horizontal, SplitterDistance = 400 };
+            rightSplit = new SplitContainer
+            {
+                Dock = DockStyle.Fill,
+                Orientation = Orientation.Horizontal,
+                SplitterDistance = (int)(ClientSize.Height * 0.7)
+            };
 
             tabControl = new TabControl { Dock = DockStyle.Fill };
             sourceTab = new TabPage("Source Code");
@@ -214,33 +224,43 @@ namespace UniversalCodePatcher.Forms
             previewTab.Controls.Add(previewBox);
             rulesTab.Controls.Add(rulesGrid);
             tabControl.TabPages.AddRange(new[] { sourceTab, previewTab, rulesTab });
-            horizontalSplit.Panel1.Controls.Add(tabControl);
+            rightSplit.Panel1.Controls.Add(tabControl);
 
             resultsGroup = new GroupBox { Text = "Patch Results", Dock = DockStyle.Fill };
             resultsList = new ListView { Dock = DockStyle.Fill, View = View.Details, FullRowSelect = true };
             resultsGroup.Controls.Add(resultsList);
-            horizontalSplit.Panel2.Controls.Add(resultsGroup);
-
-            mainPanel.Controls.Add(horizontalSplit);
+            rightSplit.Panel2.Controls.Add(resultsGroup);
 
             var bottomPanel = new Panel { Dock = DockStyle.Bottom, Height = 40 };
-            actionFlow = new FlowLayoutPanel
+            buttonTable = new TableLayoutPanel
             {
-                Dock = DockStyle.Right,
-                FlowDirection = FlowDirection.RightToLeft,
-                WrapContents = false
+                Anchor = AnchorStyles.Bottom | AnchorStyles.Right,
+                AutoSize = true,
+                ColumnCount = 3,
+                RowCount = 1
             };
-            applyButton = new ModernButton { Text = "Apply Patches", Size = new Size(90, 23), Margin = new Padding(3) };
+            buttonTable.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+            buttonTable.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+            buttonTable.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+
+            applyButton = new ModernButton
+            {
+                Text = "Apply",
+                Size = new Size(90, 23),
+                Margin = new Padding(3),
+                AccentColor = ColorTranslator.FromHtml("#0078d4")
+            };
             previewButton = new ModernButton { Text = "Preview", Size = new Size(75, 23), Margin = new Padding(3) };
             cancelButton = new ModernButton { Text = "Cancel", Size = new Size(75, 23), Margin = new Padding(3) };
-            actionFlow.Controls.Add(applyButton);
-            actionFlow.Controls.Add(previewButton);
-            actionFlow.Controls.Add(cancelButton);
-            bottomPanel.Controls.Add(actionFlow);
-            mainPanel.Controls.Add(bottomPanel);
+            buttonTable.Controls.Add(applyButton, 0, 0);
+            buttonTable.Controls.Add(previewButton, 1, 0);
+            buttonTable.Controls.Add(cancelButton, 2, 0);
 
-            Controls.Add(projectPanel);
-            Controls.Add(mainPanel);
+            bottomPanel.Controls.Add(buttonTable);
+            rightSplit.Panel2.Controls.Add(bottomPanel);
+
+            mainSplit.Panel2.Controls.Add(rightSplit);
+            Controls.Add(mainSplit);
         }
 
         private void WireEvents()
@@ -703,6 +723,21 @@ namespace UniversalCodePatcher.Forms
                 var item = new ToolStripMenuItem(p);
                 item.Click += async (s, e) => { projectPath = p; await LoadProjectAsync(p); };
                 recent.DropDownItems.Add(item);
+            }
+        }
+
+        protected override void OnResize(EventArgs e)
+        {
+            base.OnResize(e);
+            if (mainSplit != null)
+            {
+                mainSplit.SplitterDistance = Math.Max(mainSplit.Panel1MinSize,
+                    (int)(ClientSize.Width * 0.25));
+            }
+            if (rightSplit != null)
+            {
+                rightSplit.SplitterDistance = Math.Max(100,
+                    (int)(mainSplit.Panel2.ClientSize.Height * 0.7));
             }
         }
 
