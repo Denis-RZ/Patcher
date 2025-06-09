@@ -14,6 +14,7 @@ using UniversalCodePatcher.Modules.CSharpModule;
 using UniversalCodePatcher.Modules.BackupModule;
 using UniversalCodePatcher.Modules.DiffModule;
 using UniversalCodePatcher.Models;
+using UniversalCodePatcher.GUI.Models;
 
 namespace UniversalCodePatcher.Forms
 {
@@ -57,10 +58,14 @@ namespace UniversalCodePatcher.Forms
         private UniversalCodePatcher.Modules.BackupModule.BackupModule? backupModule;
         private UniversalCodePatcher.Interfaces.IDiffEngine diffEngine = null!;
         private string? currentFile;
+        private AppSettings settings = null!;
+        private static readonly string SettingsFile = Path.Combine(Application.StartupPath, "appsettings.json");
 
         public MainForm()
         {
             InitializeComponent();
+            settings = AppSettings.Load(SettingsFile);
+            showHiddenFiles = settings.ShowHiddenFiles;
             InitializeBusinessLogic();
             LoadRecentProjects();
 
@@ -655,7 +660,16 @@ namespace UniversalCodePatcher.Forms
                     switch (item.Text)
                     {
                         case "Options":
-                            item.Click += (s, e) => new SettingsForm().ShowDialog(this);
+                            item.Click += (s, e) =>
+                            {
+                                using var dlg = new SettingsForm(settings);
+                                if (dlg.ShowDialog(this) == DialogResult.OK)
+                                {
+                                    showHiddenFiles = settings.ShowHiddenFiles;
+                                    if (projectPath != null) _ = LoadProjectAsync(projectPath);
+                                    settings.Save(SettingsFile);
+                                }
+                            };
                             break;
                         case "Backup Manager":
                             item.Click += (s, e) =>
@@ -1022,6 +1036,7 @@ namespace UniversalCodePatcher.Forms
         private void OnToggleHidden(object? sender, EventArgs e)
         {
             showHiddenFiles = !showHiddenFiles;
+            settings.ShowHiddenFiles = showHiddenFiles;
             if (projectPath != null) _ = LoadProjectAsync(projectPath);
         }
 
@@ -1062,6 +1077,13 @@ namespace UniversalCodePatcher.Forms
                 item.Click += async (s, e) => { projectPath = p; await LoadProjectAsync(p); };
                 recent.DropDownItems.Add(item);
             }
+        }
+
+        protected override void OnFormClosed(FormClosedEventArgs e)
+        {
+            settings.ShowHiddenFiles = showHiddenFiles;
+            settings.Save(SettingsFile);
+            base.OnFormClosed(e);
         }
     }
 }
