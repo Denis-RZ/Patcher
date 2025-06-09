@@ -63,6 +63,7 @@ namespace UniversalCodePatcher.Forms
             InitializeComponent();
             InitializeBusinessLogic();
             LoadRecentProjects();
+            Load += (_, __) => SetInitialSplitterPosition();
         }
 
         private void InitializeBusinessLogic()
@@ -189,7 +190,6 @@ namespace UniversalCodePatcher.Forms
             {
                 Dock = DockStyle.Fill,
                 Orientation = Orientation.Vertical,
-                SplitterDistance = Math.Max((int)(ClientSize.Width * 0.25), 200),
                 Panel1MinSize = 200,
                 Panel2MinSize = 300,
                 SplitterWidth = 4
@@ -212,7 +212,9 @@ namespace UniversalCodePatcher.Forms
             {
                 Dock = DockStyle.Fill,
                 Orientation = Orientation.Horizontal,
-                SplitterDistance = (int)(ClientSize.Height * 0.7)
+                Panel1MinSize = 100,
+                Panel2MinSize = 100,
+                SplitterWidth = 4
             };
 
             tabControl = new TabControl { Dock = DockStyle.Fill };
@@ -725,6 +727,26 @@ namespace UniversalCodePatcher.Forms
                 var item = new ToolStripMenuItem(p);
                 item.Click += async (s, e) => { projectPath = p; await LoadProjectAsync(p); };
                 recent.DropDownItems.Add(item);
+            }
+        }
+
+        private void SetInitialSplitterPosition()
+        {
+            if (mainSplitter == null || mainSplitter.Width <= 0)
+                return;
+
+            int min = mainSplitter.Panel1MinSize;
+            int max = mainSplitter.Width - mainSplitter.Panel2MinSize;
+            int target = Math.Max(min, (int)(mainSplitter.Width * 0.25));
+            mainSplitter.SplitterDistance = Math.Max(min, Math.Min(max, target));
+
+            if (rightSplit != null)
+            {
+                int height = mainSplitter.Panel2.ClientSize.Height;
+                int rmin = rightSplit.Panel1MinSize;
+                int rmax = height - rightSplit.Panel2MinSize;
+                int rtarget = (int)(height * 0.7);
+                rightSplit.SplitterDistance = Math.Max(rmin, Math.Min(rmax, rtarget));
             }
         }
 
