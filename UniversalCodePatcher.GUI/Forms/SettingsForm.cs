@@ -1,3 +1,4 @@
+using System;
 using System.Windows.Forms;
 using UniversalCodePatcher.GUI.Models;
 
@@ -8,6 +9,8 @@ namespace UniversalCodePatcher.Forms
         private readonly AppSettings _settings;
         private readonly CheckBox _showHidden = new() { Dock = DockStyle.Top, Text = "Show hidden files" };
         private readonly ComboBox _themeBox = new() { Dock = DockStyle.Top, DropDownStyle = ComboBoxStyle.DropDownList };
+
+        public AppSettings Settings => _settings;
 
         public SettingsForm() : this(new AppSettings()) { }
 
