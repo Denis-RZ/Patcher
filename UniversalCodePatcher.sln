@@ -10,6 +10,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UniversalCodePatcher.Tests"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UniversalCodePatcher.Avalonia", "UniversalCodePatcher.Avalonia\UniversalCodePatcher.Avalonia.csproj", "{D84CC7A1-EF75-42F7-9505-3DF086C472FE}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UniversalCodePatcher.CLI", "UniversalCodePatcher.CLI\UniversalCodePatcher.CLI.csproj", "{7B276B67-5132-462D-B794-A92753E23AD2}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -32,6 +34,10 @@ Global
 		{D84CC7A1-EF75-42F7-9505-3DF086C472FE}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D84CC7A1-EF75-42F7-9505-3DF086C472FE}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D84CC7A1-EF75-42F7-9505-3DF086C472FE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7B276B67-5132-462D-B794-A92753E23AD2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7B276B67-5132-462D-B794-A92753E23AD2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7B276B67-5132-462D-B794-A92753E23AD2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7B276B67-5132-462D-B794-A92753E23AD2}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
