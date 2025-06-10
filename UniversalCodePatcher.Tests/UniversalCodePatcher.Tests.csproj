@@ -10,5 +10,6 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\UniversalCodePatcher\UniversalCodePatcher.csproj" />
+    <ProjectReference Include="..\UniversalCodePatcher.CLI\UniversalCodePatcher.CLI.csproj" />
   </ItemGroup>
 </Project>
